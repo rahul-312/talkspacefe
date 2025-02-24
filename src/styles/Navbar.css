@@ -9,11 +9,17 @@
   padding: 1rem 2rem;
   z-index: 1000;
   display: flex;
-  justify-content: space-between; /* Push left and right sections apart */
+  justify-content: space-between;
   align-items: center;
   box-sizing: border-box;
+  transition: background 0.3s ease;
 }
 
+.nav.scrolled {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Rest of your existing CSS */
 .nav-left ul {
   list-style: none;
   display: flex;
@@ -33,7 +39,6 @@
 
 .nav a:hover {
   color: #007bff;
-  /* text-decoration: underline; */
 }
 
 .nav-right {
@@ -54,5 +59,4 @@
 
 .logout-btn:hover {
   color: #dc3545;
-  /* text-decoration: underline; */
 }
