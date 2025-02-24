@@ -1,4 +1,3 @@
-// src/components/Navbar.js
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -8,11 +7,25 @@ import { API, apiConfig } from "../api";
 const Navbar = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const checkAuthStatus = () => {
     const refreshToken = localStorage.getItem("refresh_token");
     setIsAuthenticated(!!refreshToken);
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     checkAuthStatus();
@@ -55,16 +68,24 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="nav">
+    <nav className={`nav ${isScrolled ? "scrolled" : ""}`}>
       <div className="nav-left">
         <ul>
           <li>
             <Link to="/">Home</Link>
           </li>
           {isAuthenticated && (
-            <li>
-              <Link to="/dashboard">Dashboard</Link>
-            </li>
+            <>
+              <li>
+                <Link to="/dashboard">Dashboard</Link>
+              </li>
+              <li>
+                <Link to="/friend-list">Friendlist</Link>
+              </li>
+              <li>
+                <Link to="/add-friend">Add Friend</Link>
+              </li>
+            </>
           )}
           {!isAuthenticated && (
             <>
