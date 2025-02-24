@@ -1,14 +1,38 @@
 /* src/pages/Login/Login.css */
 
-.login-container {
-    max-width: 400px;
-    margin: 100px auto; /* Adjusted for fixed navbar space */
-    padding: 2rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+/* Global styles */
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #fff8f0; /* Creamy background */
+    height: 100%;
   }
   
+  /* Fixed wrapper for login between navbar and footer */
+  .login-wrapper {
+    position: fixed;
+    top: 70px;    /* Height of the fixed navbar */
+    bottom: 60px; /* Height of the fixed footer */
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  
+  /* Login container styling */
+  .login-container {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  /* Heading */
   .login-container h2 {
     text-align: center;
     margin-bottom: 1.5rem;
@@ -16,6 +40,7 @@
     color: #333;
   }
   
+  /* Form styles */
   .login-container form {
     display: flex;
     flex-direction: column;
@@ -35,6 +60,7 @@
     border-color: #333;
   }
   
+  /* Submit button styling */
   .login-container button {
     padding: 0.8rem;
     border: none;
@@ -50,9 +76,27 @@
     background: #555;
   }
   
-  .login-container p {
+  /* Error message styling */
+  .error-msg {
     text-align: center;
     color: #e74c3c;
     margin-top: 1rem;
+  }
+  
+  /* Signup link styling */
+  .signup-link {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .signup-link a {
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  .signup-link a:hover {
+    text-decoration: underline;
   }
   

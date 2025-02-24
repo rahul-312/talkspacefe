@@ -1,34 +1,90 @@
 // src/components/Navbar.js
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import "../styles/Navbar.css";
+import { API, apiConfig } from "../api";
 
 const Navbar = () => {
-  const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const checkAuthStatus = () => {
+    const refreshToken = localStorage.getItem("refresh_token");
+    setIsAuthenticated(!!refreshToken);
+  };
 
   useEffect(() => {
-    const handleScroll = () => {
-      const offset = window.scrollY;
-      if (offset > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    checkAuthStatus();
+    const unsubscribe = navigate(() => {
+      checkAuthStatus();
+    });
+    return () => unsubscribe;
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!refreshToken) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      setIsAuthenticated(false);
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await axios.post(
+        API.LOGOUT,
+        { refresh: refreshToken },
+        {
+          timeout: apiConfig.timeout,
+          headers: apiConfig.headers,
+        }
+      );
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      setIsAuthenticated(false);
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      setIsAuthenticated(false);
+      navigate("/login");
+    }
+  };
 
   return (
-    <nav className={`nav ${scrolled ? "scrolled" : ""}`}>
-      <ul>
-        <li>
-          <Link to="/login">Login</Link>
-        </li>
-        <li>
-          <Link to="/register">Register</Link>
-        </li>
-      </ul>
+    <nav className="nav">
+      <div className="nav-left">
+        <ul>
+          <li>
+            <Link to="/">Home</Link>
+          </li>
+          {isAuthenticated && (
+            <li>
+              <Link to="/dashboard">Dashboard</Link>
+            </li>
+          )}
+          {!isAuthenticated && (
+            <>
+              <li>
+                <Link to="/login">Login</Link>
+              </li>
+              <li>
+                <Link to="/register">Register</Link>
+              </li>
+            </>
+          )}
+        </ul>
+      </div>
+      {isAuthenticated && (
+        <div className="nav-right">
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
+        </div>
+      )}
     </nav>
   );
 };
