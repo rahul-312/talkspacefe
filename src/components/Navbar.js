@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "../styles/Navbar.css";
 import { API, apiConfig } from "../api";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -16,24 +17,17 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 50);
     };
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Check auth status whenever the location (route) changes
   useEffect(() => {
     checkAuthStatus();
-    const unsubscribe = navigate(() => {
-      checkAuthStatus();
-    });
-    return () => unsubscribe;
-  }, [navigate]);
+  }, [location]);
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refresh_token");
@@ -84,6 +78,9 @@ const Navbar = () => {
               </li>
               <li>
                 <Link to="/add-friend">Add Friend</Link>
+              </li>
+              <li>
+                <Link to="/chatrooms">Chat</Link>  {/* Link to the chat page */}
               </li>
             </>
           )}

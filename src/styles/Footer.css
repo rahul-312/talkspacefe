@@ -1,42 +1,44 @@
 /* src/styles/Footer.css */
 .footer {
-    background-color: #333;
-    color: #fff;
-    padding: 1rem 0;
-    width: 100%;
-  }
-  
-  .footer-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-  
-  .footer p {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-  }
-  
-  .footer-links {
-    list-style: none;
-    display: flex;
-    gap: 1rem;
-    padding: 0;
-    margin: 0.5rem 0 0;
-  }
-  
-  .footer-links li a {
-    color: #fff;
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.2s ease;
-  }
-  
-  .footer-links li a:hover {
-    color: #ccc;
-  }
-  
+  background-color: #333;
+  color: #fff;
+  padding: 1rem 0;
+  width: 100%;
+  position: fixed; /* Fixes the footer to the bottom */
+  bottom: 0;
+  left: 0;
+  text-align: center;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.footer p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.footer-links {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+
+.footer-links li a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.footer-links li a:hover {
+  color: #ccc;
+}

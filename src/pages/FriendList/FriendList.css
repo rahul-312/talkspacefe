@@ -1,14 +1,18 @@
 /* FriendList.css */
 .friendlist-container {
-    max-width: 600px;
-    margin: 100px auto 50px;
-    padding: 20px;
-    background: #fff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    text-align: center;
-  }
-  
+  max-width: 600px;
+  margin: 0; /* Remove the old margin since we’re centering with position */
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  text-align: center;
+  position: fixed;
+  width: 100%;
+  top: 50%; /* Move it halfway down the viewport */
+  left: 50%; /* Move it halfway across the viewport */
+  transform: translate(-50%, -50%); /* Shift it back by half its size */
+}
   .friendlist-container h2 {
     margin-bottom: 20px;
     color: #333;
