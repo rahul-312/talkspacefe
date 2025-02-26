@@ -1,0 +1,37 @@
+/* src/pages/ChatRoom/ChatRoom.css */
+.chat-room {
+  padding: 0; /* Remove padding to make full-width */
+  background-color: #fff;
+  border-radius: 0; /* Remove border-radius for full-width */
+  box-shadow: none; /* Remove shadow for seamless look */
+  width: 100%;
+  max-width: none; /* Remove max-width constraint */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin-top: 7%;
+}
+
+.chat-room  {
+  font-size: 24px;
+  color: #333;
+  margin: 0;
+  padding: 15px 20px;
+  text-align: center;
+  background-color: #f0f2f5;
+  border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 20px;
+  color: #555;
+}
+h2{
+  margin-top: 10%;
+}
