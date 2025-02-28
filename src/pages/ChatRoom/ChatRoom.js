@@ -26,7 +26,7 @@ function ChatRoom() {
 
   return (
     <div className="chat-room">
-      <h2>{room.name} {room.is_group_chat ? '(Group Chat)' : '(Direct Message)'}</h2>
+      {/* <h2>{room.name} {room.is_group_chat ? '(Group Chat)' : '(Direct Message)'}</h2> */}
       <MessageList roomId={id} />
     </div>
   );

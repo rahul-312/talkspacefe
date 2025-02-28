@@ -1,13 +1,5 @@
 /* src/pages/Login/Login.css */
 
-/* Global styles */
-html, body {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #fff8f0; /* Creamy background */
-    height: 100%;
-  }
   
   /* Fixed wrapper for login between navbar and footer */
   .login-wrapper {

@@ -17,23 +17,41 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background-color: #fff;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
   border-bottom: 1px solid #ddd;
 }
 
-.chat-header .chat-title {
-  flex-grow: 1;
-  text-align: center;
-  font-weight: bold;
+.room-name {
   font-size: 16px;
-  margin-left: 10px;
+  font-weight: bold;
+  color: #333;
 }
 
-.chat-header .actions {
+.button-group {
+  display: flex;
+  gap: 10px; /* Space between call and video buttons */
+}
+
+.chat-header .call-button,
+.chat-header .video-call-button {
+  background-color: transparent;
+  border: none;
+  font-size: 18px; /* Slightly smaller than emojis for better fit */
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+}
+
+.chat-header .call-button:hover {
+  color: #4CAF50;
+}
+
+.chat-header .video-call-button:hover {
+  color: #2196F3;
 }
 
 .messages-container {
@@ -107,6 +125,14 @@
   font-size: 20px;
   cursor: pointer;
   margin-left: 8px;
+}
+
+.message-form .send-button:hover {
+  color: #2196F3;
+}
+
+.message-form .plus-button:hover {
+  color: #666;
 }
 
 .messages-container::-webkit-scrollbar {

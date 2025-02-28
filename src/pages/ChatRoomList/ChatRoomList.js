@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import { getChatRooms, createChatRoom, getFriends } from '../../api';
 import './ChatRoomList.css';
 
@@ -7,15 +8,13 @@ function ChatRoomList() {
   const [chatRooms, setChatRooms] = useState([]);
   const [friends, setFriends] = useState([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
-  const [showFriends, setShowFriends] = useState(false); // Toggle friend list visibility
+  const [showFriends, setShowFriends] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchChatRooms();
-    fetchFriends();
-  }, []);
-
-  const fetchChatRooms = async () => {
+  // Memoize fetch functions to prevent recreation on every render
+  const fetchChatRooms = useCallback(async () => {
     try {
       const response = await getChatRooms();
       console.log('Chat rooms response:', response.data);
@@ -24,9 +23,9 @@ function ChatRoomList() {
       console.error('Error fetching chat rooms:', error);
       setChatRooms([]);
     }
-  };
+  }, []);
 
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     try {
       const response = await getFriends();
       console.log('Friends API response:', response.data);
@@ -37,14 +36,42 @@ function ChatRoomList() {
       console.error('Error fetching friends:', error);
       setFriends([]);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const decodedToken = jwtDecode(token);
+        const userId = decodedToken.user_id || decodedToken.id;
+        console.log('Decoded token:', decodedToken);
+        setCurrentUserId(userId);
+
+        await Promise.all([fetchChatRooms(), fetchFriends()]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [navigate, fetchChatRooms, fetchFriends]); // Include all dependencies
 
   const handleCreateOrJoinChat = async (friendId) => {
-    const existingChat = chatRooms.find((room) => 
-      !room.is_group_chat && 
-      room.users.includes(friendId) && 
-      room.users.length === 2 && 
-      room.users.includes(/* current user ID, e.g., from auth */ 5) // Placeholder
+    const existingChat = chatRooms.find(
+      (room) =>
+        !room.is_group_chat &&
+        room.users.includes(friendId) &&
+        room.users.includes(currentUserId) && // Use currentUserId instead of hardcoded value
+        room.users.length === 2
     );
 
     if (existingChat) {
@@ -52,13 +79,13 @@ function ChatRoomList() {
     } else {
       try {
         const response = await createChatRoom([friendId]);
-        setChatRooms([...chatRooms, response.data]);
+        setChatRooms((prev) => [...prev, response.data]);
         navigate(`/chatrooms/${response.data.id}`);
       } catch (error) {
         console.error('Error creating chat room:', error);
       }
     }
-    setShowFriends(false); // Close friends list after selection
+    setShowFriends(false);
   };
 
   const toggleFriendSelection = (id) => {
@@ -72,7 +99,7 @@ function ChatRoomList() {
     if (selectedFriendIds.length === 0) return;
     try {
       const response = await createChatRoom(selectedFriendIds);
-      setChatRooms([...chatRooms, response.data]);
+      setChatRooms((prev) => [...prev, response.data]);
       setSelectedFriendIds([]);
       setShowFriends(false);
       navigate(`/chatrooms/${response.data.id}`);
@@ -80,6 +107,26 @@ function ChatRoomList() {
       console.error('Error creating group chat:', error);
     }
   };
+
+  const getChatDisplayName = (room) => {
+    console.log('getChatDisplayName - room:', room, 'currentUserId:', currentUserId, 'friends:', friends);
+    if (room.is_group_chat) {
+      return room.name || 'Group Chat';
+    } else {
+      const otherUser = room.other_users?.[0];
+      if (otherUser?.first_name && otherUser?.last_name) {
+        return `${otherUser.first_name} ${otherUser.last_name}`;
+      } else if (otherUser?.username) {
+        return otherUser.username;
+      } else {
+        return 'Unknown User';
+      }
+    }
+  };
+
+  if (loading || !currentUserId) {
+    return <div>Loading chats...</div>;
+  }
 
   return (
     <div className="chat-room-list">
@@ -95,7 +142,7 @@ function ChatRoomList() {
           <h3>Create Chat</h3>
           <form className="create-chat-form" onSubmit={handleCreateGroupChat}>
             <div className="friend-selection">
-              {Array.isArray(friends) && friends.length > 0 ? (
+              {friends.length > 0 ? (
                 friends.map((friend) => (
                   <label key={friend.id}>
                     <input
@@ -103,7 +150,7 @@ function ChatRoomList() {
                       checked={selectedFriendIds.includes(friend.id)}
                       onChange={() => toggleFriendSelection(friend.id)}
                     />
-                    {friend.username}
+                    {friend.first_name && friend.last_name ? `${friend.first_name} ${friend.last_name}` : friend.username}
                     <button
                       type="button"
                       className="direct-chat-button"
@@ -130,7 +177,7 @@ function ChatRoomList() {
           <li key={room.id}>
             <button onClick={() => navigate(`/chatrooms/${room.id}`)}>
               <span className="chat-icon">💬</span>
-              {room.name} {room.is_group_chat ? '(Group)' : '(DM)'}
+              {getChatDisplayName(room)}
             </button>
           </li>
         ))}

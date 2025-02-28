@@ -4,7 +4,7 @@
   padding: 2rem;
   padding-top: 7rem; /* Shift content down */
   text-align: center;
-  background-color: #f9f9f9;
+  background-color: #ffffff;
   min-height: 100vh; /* Full height, no need for calc if no footer */
   box-sizing: border-box;
 }
