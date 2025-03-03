@@ -9,6 +9,7 @@ import FriendList from "./pages/FriendList/FriendList";
 import AddFriend from "./pages/AddFriend/AddFriend";
 import ChatRoomList from "./pages/ChatRoomList/ChatRoomList";
 import ChatRoomDetail from "./pages/ChatRoom/ChatRoom";
+import Profile from "./pages/Profile/Profile"; // Import the Profile component
 import "./styles/App.css";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
             <Route path="/add-friend" element={<AddFriend />} />
             <Route path="/chatrooms" element={<ChatRoomList />} />
             <Route path="/chatrooms/:id" element={<ChatRoomDetail />} />
+            <Route path="/profile" element={<Profile />} /> {/* Added Profile route */}
           </Routes>
         </div>
         <Footer />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "../styles/Navbar.css";
@@ -9,6 +9,8 @@ const Navbar = () => {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const checkAuthStatus = () => {
     const refreshToken = localStorage.getItem("refresh_token");
@@ -24,10 +26,21 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Check auth status whenever the location (route) changes
   useEffect(() => {
     checkAuthStatus();
   }, [location]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refresh_token");
@@ -48,17 +61,18 @@ const Navbar = () => {
           headers: apiConfig.headers,
         }
       );
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      setIsAuthenticated(false);
-      navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       setIsAuthenticated(false);
       navigate("/login");
     }
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
@@ -80,7 +94,7 @@ const Navbar = () => {
                 <Link to="/add-friend">Add Friend</Link>
               </li>
               <li>
-                <Link to="/chatrooms">Chat</Link>  {/* Link to the chat page */}
+                <Link to="/chatrooms">Chat</Link>
               </li>
             </>
           )}
@@ -97,10 +111,27 @@ const Navbar = () => {
         </ul>
       </div>
       {isAuthenticated && (
-        <div className="nav-right">
-          <button onClick={handleLogout} className="logout-btn">
-            Logout
+        <div className="nav-right" ref={dropdownRef}>
+          <button onClick={toggleDropdown} className="settings-btn">
+            Settings ▼
           </button>
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              <Link
+                to="/profile"
+                className="dropdown-item"
+                onClick={() => setIsDropdownOpen(false)}
+              >
+                Profile
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="dropdown-item logout-btn"
+              >
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       )}
     </nav>
