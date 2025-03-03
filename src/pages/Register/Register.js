@@ -1,7 +1,7 @@
 // src/pages/Register/Register.js
 import { useState } from "react";
-import { API } from "../../api"; // Import the API endpoints from api.js
-import { Link } from "react-router-dom"; // Import Link for navigation
+import { API } from "../../api";
+import { Link } from "react-router-dom";
 import "./Register.css";
 
 const Register = () => {
@@ -14,6 +14,7 @@ const Register = () => {
     gender: "",
     password: "",
     confirm_password: "",
+    profile_picture: null,  // Updated to handle file object
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -22,28 +23,51 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Updated profile picture handler
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type and size
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      
+      if (!validTypes.includes(file.type)) {
+        setError("Please upload a valid image file (JPEG, PNG, or GIF)");
+        setFormData({ ...formData, profile_picture: null });
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        setError("Image size must be less than 5MB");
+        setFormData({ ...formData, profile_picture: null });
+        return;
+      }
+      
+      setError(""); // Clear any previous errors
+      setFormData({ ...formData, profile_picture: file });
+    }
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
-    // Basic client-side check for matching passwords
     if (formData.password !== formData.confirm_password) {
       setError("Passwords do not match.");
       setMessage("");
       return;
     }
+    
+    // Use FormData to handle file upload
+    const formPayload = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key !== 'confirm_password' && value !== null) {
+        formPayload.append(key, value);
+      }
+    });
+
     try {
       const response = await fetch(API.REGISTER, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Exclude confirm_password from the payload if needed by your backend
-        body: JSON.stringify({
-          email: formData.email,
-          phone_number: formData.phone_number,
-          username: formData.username,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          gender: formData.gender,
-          password: formData.password,
-        }),
+        body: formPayload, // Send FormData instead of JSON
       });
       const data = await response.json();
       if (response.ok) {
@@ -139,6 +163,20 @@ const Register = () => {
               onChange={handleChange}
               required
             />
+          </div>
+          {/* Updated profile picture input */}
+          <div className="form-row">
+            <input
+              type="file"
+              name="profile_picture"
+              onChange={handleFileChange}
+              accept="image/jpeg,image/png,image/gif"
+            />
+            {formData.profile_picture && (
+              <span className="file-name">
+                {formData.profile_picture.name}
+              </span>
+            )}
           </div>
           <button type="submit">Register</button>
         </form>
