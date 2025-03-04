@@ -9,13 +9,16 @@ const Profile = () => {
   const [userData, setUserData] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await getUserDetails();
         setUserData(response.data);
-        setFormData(response.data);
+        // Exclude profile_picture from formData to avoid string URL
+        const { profile_picture, ...rest } = response.data;
+        setFormData(rest);
       } catch (err) {
         Swal.fire({
           icon: "error",
@@ -58,7 +61,8 @@ const Profile = () => {
         return;
       }
       const fileUrl = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, profile_picture: file, previewUrl: fileUrl }));
+      setProfilePictureFile(file);
+      setFormData((prev) => ({ ...prev, previewUrl: fileUrl }));
     }
   };
 
@@ -70,13 +74,15 @@ const Profile = () => {
         updateData.append(key, value);
       }
     });
-
+    if (profilePictureFile && profilePictureFile instanceof File) {
+      updateData.append("profile_picture", profilePictureFile, profilePictureFile.name);
+    }
     try {
-      const response = await api.put(API.USER_DETAIL, updateData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.put(API.USER_DETAIL, updateData);
       setUserData(response.data);
-      setFormData((prev) => ({ ...response.data, previewUrl: null }));
+      const { profile_picture, ...rest } = response.data;
+      setFormData({ ...rest, previewUrl: null });
+      setProfilePictureFile(null);
       setEditMode(false);
       Swal.fire({
         icon: "success",
@@ -87,16 +93,15 @@ const Profile = () => {
         timerProgressBar: true,
       });
     } catch (err) {
+      console.error("Error response:", err.response?.data);
       Swal.fire({
         icon: "error",
         title: "Update Failed",
         text: err.response?.data?.detail || "Failed to update profile.",
         confirmButtonColor: "#e74c3c",
       });
-      console.error(err);
     }
   };
-
   const handleDeactivate = async () => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -122,7 +127,7 @@ const Profile = () => {
           timer: 2000,
           timerProgressBar: true,
         }).then(() => {
-          navigate("/login"); // navigate is used here
+          navigate("/login");
         });
       } catch (err) {
         Swal.fire({
@@ -147,9 +152,6 @@ const Profile = () => {
   const getImageSrc = () => {
     if (formData.previewUrl) {
       return formData.previewUrl;
-    }
-    if (formData.profile_picture && typeof formData.profile_picture === "string") {
-      return `http://127.0.0.1:8000${formData.profile_picture}`;
     }
     if (userData.profile_picture) {
       return `http://127.0.0.1:8000${userData.profile_picture}`;

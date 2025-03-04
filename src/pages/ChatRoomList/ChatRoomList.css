@@ -115,7 +115,7 @@
   cursor: pointer;
   transition: background-color 0.2s;
   width: 100%;
-  margin-top: 5%
+  margin-top: 5%;
 }
 
 .create-chat-button:disabled {
@@ -156,8 +156,16 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.chat-icon {
+/* Removed .chat-icon since we're using images now */
+/* .chat-icon {
   font-size: 18px;
+} */
+
+.chat-profile-pic {
+  width: 40px; /* Adjust size as needed */
+  height: 40px;
+  border-radius: 50%; /* Circular profile picture */
+  object-fit: cover; /* Ensure image fits nicely */
 }
 
 .no-friends {

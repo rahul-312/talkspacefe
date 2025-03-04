@@ -30,13 +30,19 @@ export const getAuthHeaders = () => ({
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: apiConfig.timeout,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Remove static Content-Type here
 });
 
 api.interceptors.request.use((config) => {
   const headers = getAuthHeaders();
+  
+  // Dynamically set Content-Type based on data type
+  if (config.data instanceof FormData) {
+    config.headers['Content-Type'] = 'multipart/form-data';
+  } else {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
   config.headers = { ...config.headers, ...headers };
   return config;
 });
@@ -71,4 +77,4 @@ export const getFriends = () => api.get(API.FRIENDLIST);
 
 // User detail functions
 export const getUserDetails = () => api.get(API.USER_DETAIL);
-export const getUserProfileById = (id) => api.get(`${API.USER_BY_ID}${id}/`); // Added
+export const getUserProfileById = (id) => api.get(`${API.USER_BY_ID}${id}/`);
