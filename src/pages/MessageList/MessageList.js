@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { getMessages, sendMessage, getChatRoomDetails } from '../../api';
+import { getMessages, sendMessage, getChatRoomDetails, MEDIA_BASE_URL } from '../../api';
 import useChatWebSocket from '../../hooks/useChatWebSocket';
 import { jwtDecode } from 'jwt-decode';
 import { FaPhone, FaVideo } from 'react-icons/fa';
@@ -18,20 +18,12 @@ function MessageList({ roomId }) {
   try {
     const decoded = jwtDecode(token);
     currentUserId = decoded.user_id || decoded.sub;
-    console.log('Decoded token:', decoded);
-    console.log('Current user ID from token:', currentUserId);
   } catch (error) {
-    console.error('Error decoding token:', error);
     currentUserId = null;
   }
 
   const handleMessageReceived = useCallback((newMsg) => {
-    console.log('Received WebSocket message:', newMsg);
-    setMessages((prev) => {
-      const updatedMessages = [...prev, newMsg];
-      console.log('Updated messages count:', updatedMessages.length);
-      return updatedMessages;
-    });
+    setMessages((prev) => [...prev, newMsg]);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [setMessages]);
 
@@ -40,7 +32,6 @@ function MessageList({ roomId }) {
   const fetchMessages = useCallback(async () => {
     try {
       const response = await getMessages(roomId);
-      console.log('Fetched messages count:', response.data.length);
       setMessages(response.data);
     } catch (error) {
       console.error('Error fetching messages:', error.response?.data || error.message);
@@ -50,7 +41,6 @@ function MessageList({ roomId }) {
   const fetchRoomDetails = useCallback(async () => {
     try {
       const response = await getChatRoomDetails(roomId);
-      console.log('Fetched room details:', response.data);
       setRoomDetails(response.data);
     } catch (error) {
       console.error('Error fetching room details:', error.response?.data || error.message);
@@ -86,16 +76,29 @@ function MessageList({ roomId }) {
   const groupName = roomDetails?.chat_room?.name;
   const otherUser = roomDetails?.other_users?.[0];
 
+  // Construct full profile picture URL
+  const profilePictureUrl = otherUser?.profile_picture
+    ? `${MEDIA_BASE_URL}${otherUser.profile_picture.startsWith('/') ? '' : '/'}${otherUser.profile_picture}`
+    : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+
   return (
     <div className="message-list">
       <div className="chat-header">
-        {/* Display group name for group chats, otherwise other user's name */}
+        {/* Display group name for group chats, otherwise other user's name with profile picture */}
         {isGroupChat ? (
-          <h3>{groupName || ''}</h3> // Show group name or empty string if not yet loaded
+          <h3>{groupName || ''}</h3>
         ) : (
           otherUser && (
-            <h3>{`${otherUser.first_name} ${otherUser.last_name}`}</h3>
-          ) // Show other user's name only when available
+            <div className="user-header">
+              <img
+                src={profilePictureUrl}
+                alt={`${otherUser.first_name} ${otherUser.last_name}`}
+                className="chat-profile-pic"
+                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`)}
+              />
+              <h3>{`${otherUser.first_name} ${otherUser.last_name}`}</h3>
+            </div>
+          )
         )}
         <div className="button-group">
           <button className="call-button" title="Call">
@@ -107,21 +110,34 @@ function MessageList({ roomId }) {
         </div>
       </div>
       <div className="messages-container" ref={messagesContainerRef}>
-        {messages.map((msg) => {
-          console.log(`Message ID: ${msg.id}, User ID: ${msg.user}, Current user ID: ${currentUserId}, Sent: ${msg.user === currentUserId}`);
-          return (
-            <div
-              key={msg.id}
-              className={`message ${msg.user === currentUserId ? 'sent' : 'received'}`}
-            >
-              <div className="message-content">
-                <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
-                <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                <div>{msg.message}</div>
-              </div>
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`message ${msg.user === currentUserId ? 'sent' : 'received'}`}
+          >
+            {msg.user !== currentUserId && (
+              <img
+                src={`${MEDIA_BASE_URL}${msg.profile_picture || '/media/profile_pictures/default-profile.png'}`}
+                alt={`${msg.first_name} ${msg.last_name}`}
+                className="message-profile-pic"
+                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`)}
+              />
+            )}
+            <div className="message-content">
+              <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
+              <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+              <div>{msg.message}</div>
             </div>
-          );
-        })}
+            {msg.user === currentUserId && (
+              <img
+                src={`${MEDIA_BASE_URL}${msg.profile_picture || '/media/profile_pictures/default-profile.png'}`}
+                alt={`${msg.first_name} ${msg.last_name}`}
+                className="message-profile-pic"
+                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`)}
+              />
+            )}
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
       <form className="message-form" onSubmit={handleSendMessage}>
