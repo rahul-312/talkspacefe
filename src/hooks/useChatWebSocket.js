@@ -9,7 +9,6 @@ const useChatWebSocket = (roomId, onMessageReceived) => {
     websocket.onopen = () => console.log('WebSocket connected for room:', roomId);
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Raw WebSocket data:', data);
       const messageId = `${data.user_id || data.user}-${data.timestamp}`; // Handle user_id or user
       if (!processedMessageIds.current.has(messageId)) {
         processedMessageIds.current.add(messageId);
@@ -19,6 +18,7 @@ const useChatWebSocket = (roomId, onMessageReceived) => {
           first_name: data.first_name,
           last_name: data.last_name,
           user: data.user_id || data.user, // Ensure user field matches API
+          profile_picture: data.profile_picture, // Include profile_picture
           timestamp: data.timestamp,
         });
       }

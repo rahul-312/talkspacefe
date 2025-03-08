@@ -17,7 +17,6 @@ function ChatRoomList() {
   const fetchChatRooms = useCallback(async () => {
     try {
       const response = await getChatRooms();
-      console.log('Chat rooms response:', response.data);
       setChatRooms(response.data || []);
       return response.data || []; // Return data for further processing
     } catch (error) {
@@ -30,9 +29,7 @@ function ChatRoomList() {
   const fetchFriends = useCallback(async () => {
     try {
       const response = await getFriends();
-      console.log('Friends API response:', response.data);
       const friendsData = Array.isArray(response.data.friends) ? response.data.friends : [];
-      console.log('Setting friends to:', friendsData);
       setFriends(friendsData);
     } catch (error) {
       console.error('Error fetching friends:', error);
@@ -65,7 +62,6 @@ function ChatRoomList() {
         setLoading(true);
         const decodedToken = jwtDecode(token);
         const userId = decodedToken.user_id || decodedToken.id;
-        console.log('Decoded token:', decodedToken);
         setCurrentUserId(userId);
 
         await Promise.all([fetchChatRooms(), fetchFriends()]);
@@ -137,7 +133,6 @@ function ChatRoomList() {
   };
 
   const getChatDisplayName = (room) => {
-    console.log('getChatDisplayName - room:', room, 'currentUserId:', currentUserId, 'friends:', friends);
     if (room.is_group_chat) {
       return room.name || 'Group Chat';
     } else {
