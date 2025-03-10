@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { getChatRooms, createChatRoom, getFriends } from '../../api';
+import { getChatRooms, createChatRoom, getFriends, getUserProfileById, MEDIA_BASE_URL } from '../../api';
 import './ChatRoomList.css';
 
 function ChatRoomList() {
@@ -11,17 +11,19 @@ function ChatRoomList() {
   const [showFriends, setShowFriends] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [userProfiles, setUserProfiles] = useState({});
   const navigate = useNavigate();
 
-  // Memoize fetch functions to prevent recreation on every render
   const fetchChatRooms = useCallback(async () => {
     try {
       const response = await getChatRooms();
       console.log('Chat rooms response:', response.data);
       setChatRooms(response.data || []);
+      return response.data || []; // Return data for further processing
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
       setChatRooms([]);
+      return [];
     }
   }, []);
 
@@ -38,6 +40,19 @@ function ChatRoomList() {
     }
   }, []);
 
+  const fetchUserProfile = useCallback(async (userId) => {
+    if (!userProfiles[userId]) {
+      try {
+        const response = await getUserProfileById(userId);
+        console.log(`Fetched profile for user ${userId}:`, response.data);
+        setUserProfiles((prev) => ({ ...prev, [userId]: response.data }));
+      } catch (error) {
+        console.error(`Error fetching profile for user ${userId}:`, error);
+      }
+    }
+  }, [userProfiles]);
+
+  // Initial data fetch
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -45,7 +60,7 @@ function ChatRoomList() {
       return;
     }
 
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
         const decodedToken = jwtDecode(token);
@@ -55,22 +70,35 @@ function ChatRoomList() {
 
         await Promise.all([fetchChatRooms(), fetchFriends()]);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching initial data:', error);
         navigate('/login');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [navigate, fetchChatRooms, fetchFriends]); // Include all dependencies
+    fetchInitialData();
+  }, [navigate, fetchChatRooms, fetchFriends]); // Removed chatRooms from dependencies
+
+  // Fetch user profiles after chatRooms is updated
+  useEffect(() => {
+    if (!loading && chatRooms.length > 0) {
+      const uniqueUserIds = new Set();
+      chatRooms.forEach((room) => {
+        if (!room.is_group_chat && room.other_users?.[0]?.id) {
+          uniqueUserIds.add(room.other_users[0].id);
+        }
+      });
+      Promise.all([...uniqueUserIds].map((id) => fetchUserProfile(id)));
+    }
+  }, [chatRooms, loading, fetchUserProfile]); // Depend on chatRooms and loading
 
   const handleCreateOrJoinChat = async (friendId) => {
     const existingChat = chatRooms.find(
       (room) =>
         !room.is_group_chat &&
         room.users.includes(friendId) &&
-        room.users.includes(currentUserId) && // Use currentUserId instead of hardcoded value
+        room.users.includes(currentUserId) &&
         room.users.length === 2
     );
 
@@ -121,6 +149,20 @@ function ChatRoomList() {
       } else {
         return 'Unknown User';
       }
+    }
+  };
+
+  const getChatProfileImage = (room) => {
+    if (room.is_group_chat) {
+      return `${MEDIA_BASE_URL}/media/default-group.png`;
+    } else {
+      const otherUser = room.other_users?.[0];
+      const userId = otherUser?.id;
+      const profile = userProfiles[userId] || otherUser;
+      if (profile?.profile_picture) {
+        return `${MEDIA_BASE_URL}${profile.profile_picture}`;
+      }
+      return `${MEDIA_BASE_URL}/media/default-profile.png`;
     }
   };
 
@@ -176,7 +218,12 @@ function ChatRoomList() {
         {chatRooms.map((room) => (
           <li key={room.id}>
             <button onClick={() => navigate(`/chatrooms/${room.id}`)}>
-              <span className="chat-icon">💬</span>
+              <img
+                src={getChatProfileImage(room)}
+                alt="Profile"
+                className="chat-profile-pic"
+                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/default-profile.png`)}
+              />
               {getChatDisplayName(room)}
             </button>
           </li>

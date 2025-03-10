@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { getMessages, sendMessage, getChatRoomDetails } from '../../api';
+import { getMessages, sendMessage, getChatRoomDetails, MEDIA_BASE_URL } from '../../api';
 import useChatWebSocket from '../../hooks/useChatWebSocket';
 import { jwtDecode } from 'jwt-decode';
 import { FaPhone, FaVideo } from 'react-icons/fa';
@@ -18,20 +18,24 @@ function MessageList({ roomId }) {
   try {
     const decoded = jwtDecode(token);
     currentUserId = decoded.user_id || decoded.sub;
-    console.log('Decoded token:', decoded);
-    console.log('Current user ID from token:', currentUserId);
   } catch (error) {
-    console.error('Error decoding token:', error);
     currentUserId = null;
+    console.error('Error decoding JWT:', error);
   }
 
   const handleMessageReceived = useCallback((newMsg) => {
-    console.log('Received WebSocket message:', newMsg);
-    setMessages((prev) => {
-      const updatedMessages = [...prev, newMsg];
-      console.log('Updated messages count:', updatedMessages.length);
-      return updatedMessages;
-    });
+
+    // Ensure profile_picture is correctly accessed
+    const profilePictureUrl = newMsg.profile_picture
+      ? `${MEDIA_BASE_URL}${newMsg.profile_picture.startsWith('/') ? '' : '/'}${newMsg.profile_picture}`
+      : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+
+    const updatedMsg = {
+      ...newMsg,
+      profile_picture: profilePictureUrl
+    };
+
+    setMessages((prev) => [...prev, updatedMsg]);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [setMessages]);
 
@@ -40,8 +44,16 @@ function MessageList({ roomId }) {
   const fetchMessages = useCallback(async () => {
     try {
       const response = await getMessages(roomId);
-      console.log('Fetched messages count:', response.data.length);
-      setMessages(response.data);
+      const updatedMessages = response.data.map(msg => {
+        const profilePictureUrl = msg.profile_picture
+          ? `${MEDIA_BASE_URL}${msg.profile_picture.startsWith('/') ? '' : '/'}${msg.profile_picture}`
+          : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+        return {
+          ...msg,
+          profile_picture: profilePictureUrl
+        };
+      });
+      setMessages(updatedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error.response?.data || error.message);
     }
@@ -50,7 +62,17 @@ function MessageList({ roomId }) {
   const fetchRoomDetails = useCallback(async () => {
     try {
       const response = await getChatRoomDetails(roomId);
-      console.log('Fetched room details:', response.data);
+      if (response.data.other_users && response.data.other_users.length > 0) {
+        response.data.other_users = response.data.other_users.map(user => {
+          const profilePictureUrl = user.profile_picture
+            ? `${MEDIA_BASE_URL}${user.profile_picture.startsWith('/') ? '' : '/'}${user.profile_picture}`
+            : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+          return {
+            ...user,
+            profile_picture: profilePictureUrl
+          };
+        });
+      }
       setRoomDetails(response.data);
     } catch (error) {
       console.error('Error fetching room details:', error.response?.data || error.message);
@@ -65,9 +87,43 @@ function MessageList({ roomId }) {
       await sendMessage(roomId, newMessage);
       setNewMessage('');
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      await fetchRoomDetails();
     } catch (error) {
       console.error('Error sending message:', error.response?.data || error.message);
     }
+  };
+
+  const handleImageError = (e, retries = 2, delay = 1000) => {
+    console.error(`Failed to load image: ${e.target.src}`);
+    fetch(e.target.src, { method: 'HEAD' })
+      .then(response => {
+        console.error(`Image request status: ${response.status}`);
+        console.error(`Image request headers:`, response.headers);
+        if (response.status === 404 || response.status === 403) {
+          console.log('Permanent error, falling back to default image');
+          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+        } else if (retries > 0) {
+          console.log(`Retrying image load (${retries} attempts left)...`);
+          setTimeout(() => {
+            e.target.src = `${e.target.src}&retry=${retries}`;
+          }, delay);
+        } else {
+          console.log('All retries failed, falling back to default image');
+          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch image headers:', err);
+        if (retries > 0) {
+          console.log(`Retrying image load (${retries} attempts left)...`);
+          setTimeout(() => {
+            e.target.src = `${e.target.src}&retry=${retries}`;
+          }, delay);
+        } else {
+          console.log('All retries failed, falling back to default image');
+          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+        }
+      });
   };
 
   useEffect(() => {
@@ -81,21 +137,29 @@ function MessageList({ roomId }) {
 
   if (!currentUserId) return <div>Please log in to view messages</div>;
 
-  // Determine what to display in the header
   const isGroupChat = roomDetails?.chat_room?.is_group_chat;
   const groupName = roomDetails?.chat_room?.name;
   const otherUser = roomDetails?.other_users?.[0];
 
+  const profilePictureUrl = otherUser?.profile_picture || `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+
   return (
     <div className="message-list">
       <div className="chat-header">
-        {/* Display group name for group chats, otherwise other user's name */}
         {isGroupChat ? (
-          <h3>{groupName || ''}</h3> // Show group name or empty string if not yet loaded
+          <h3>{groupName || ''}</h3>
         ) : (
           otherUser && (
-            <h3>{`${otherUser.first_name} ${otherUser.last_name}`}</h3>
-          ) // Show other user's name only when available
+            <div className="user-header">
+              <img
+                src={profilePictureUrl}
+                alt={`${otherUser.first_name} ${otherUser.last_name}`}
+                className="chat-profile-pic"
+                onError={(e) => handleImageError(e)}
+              />
+              <h3>{`${otherUser.first_name} ${otherUser.last_name}`}</h3>
+            </div>
+          )
         )}
         <div className="button-group">
           <button className="call-button" title="Call">
@@ -107,21 +171,36 @@ function MessageList({ roomId }) {
         </div>
       </div>
       <div className="messages-container" ref={messagesContainerRef}>
-        {messages.map((msg) => {
-          console.log(`Message ID: ${msg.id}, User ID: ${msg.user}, Current user ID: ${currentUserId}, Sent: ${msg.user === currentUserId}`);
-          return (
-            <div
-              key={msg.id}
-              className={`message ${msg.user === currentUserId ? 'sent' : 'received'}`}
-            >
-              <div className="message-content">
-                <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
-                <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                <div>{msg.message}</div>
-              </div>
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`message ${msg.user === currentUserId ? 'sent' : 'received'}`}
+          >
+            {msg.user !== currentUserId && (
+              <img
+                src={msg.profile_picture}
+                alt={`${msg.first_name} ${msg.last_name}`}
+                className="message-profile-pic"
+                onError={(e) => handleImageError(e)}
+              />
+            )}
+            <div className="message-content">
+              <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
+              <span className="message-timestamp">
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </span>
+              <div>{msg.message}</div>
             </div>
-          );
-        })}
+            {msg.user === currentUserId && (
+              <img
+                src={msg.profile_picture}
+                alt={`${msg.first_name} ${msg.last_name}`}
+                className="message-profile-pic"
+                onError={(e) => handleImageError(e)}
+              />
+            )}
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
       <form className="message-form" onSubmit={handleSendMessage}>
