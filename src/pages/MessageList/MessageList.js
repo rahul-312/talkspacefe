@@ -12,7 +12,6 @@ function MessageList({ roomId }) {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Decode JWT token to get current user ID
   const token = localStorage.getItem('access_token');
   let currentUserId;
   try {
@@ -24,11 +23,9 @@ function MessageList({ roomId }) {
   }
 
   const handleMessageReceived = useCallback((newMsg) => {
-
-    // Ensure profile_picture is correctly accessed
     const profilePictureUrl = newMsg.profile_picture
       ? `${MEDIA_BASE_URL}${newMsg.profile_picture.startsWith('/') ? '' : '/'}${newMsg.profile_picture}`
-      : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+      : '/default-profile.png'; // Updated to use public directory
 
     const updatedMsg = {
       ...newMsg,
@@ -47,7 +44,7 @@ function MessageList({ roomId }) {
       const updatedMessages = response.data.map(msg => {
         const profilePictureUrl = msg.profile_picture
           ? `${MEDIA_BASE_URL}${msg.profile_picture.startsWith('/') ? '' : '/'}${msg.profile_picture}`
-          : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+          : '/default-profile.png'; // Updated to use public directory
         return {
           ...msg,
           profile_picture: profilePictureUrl
@@ -66,7 +63,7 @@ function MessageList({ roomId }) {
         response.data.other_users = response.data.other_users.map(user => {
           const profilePictureUrl = user.profile_picture
             ? `${MEDIA_BASE_URL}${user.profile_picture.startsWith('/') ? '' : '/'}${user.profile_picture}`
-            : `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+            : '/default-profile.png'; // Updated to use public directory
           return {
             ...user,
             profile_picture: profilePictureUrl
@@ -97,19 +94,15 @@ function MessageList({ roomId }) {
     console.error(`Failed to load image: ${e.target.src}`);
     fetch(e.target.src, { method: 'HEAD' })
       .then(response => {
-        console.error(`Image request status: ${response.status}`);
-        console.error(`Image request headers:`, response.headers);
         if (response.status === 404 || response.status === 403) {
-          console.log('Permanent error, falling back to default image');
-          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+          e.target.src = '/default-profile.png'; // Updated to use public directory
         } else if (retries > 0) {
           console.log(`Retrying image load (${retries} attempts left)...`);
           setTimeout(() => {
             e.target.src = `${e.target.src}&retry=${retries}`;
           }, delay);
         } else {
-          console.log('All retries failed, falling back to default image');
-          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+          e.target.src = '/default-profile.png'; // Updated to use public directory
         }
       })
       .catch(err => {
@@ -120,8 +113,7 @@ function MessageList({ roomId }) {
             e.target.src = `${e.target.src}&retry=${retries}`;
           }, delay);
         } else {
-          console.log('All retries failed, falling back to default image');
-          e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+          e.target.src = '/default-profile.png'; // Updated to use public directory
         }
       });
   };
@@ -141,7 +133,7 @@ function MessageList({ roomId }) {
   const groupName = roomDetails?.chat_room?.name;
   const otherUser = roomDetails?.other_users?.[0];
 
-  const profilePictureUrl = otherUser?.profile_picture || `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
+  const profilePictureUrl = otherUser?.profile_picture || '/default-profile.png'; // Updated to use public directory
 
   return (
     <div className="message-list">
@@ -186,7 +178,9 @@ function MessageList({ roomId }) {
             )}
             <div className="message-content">
               <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
-              <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
+              <span className="message-timestamp">
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </span>
               <div>{msg.message}</div>
             </div>
             {msg.user === currentUserId && (
