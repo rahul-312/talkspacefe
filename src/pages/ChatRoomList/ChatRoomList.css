@@ -1,24 +1,18 @@
-/* src/pages/ChatRoomList/ChatRoomList.css */
 .chat-room-list {
+  max-width: 800px;
+  margin: 6% auto;
   padding: 20px;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
-  margin: 15% auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: #f5f5f5;
+  min-height: 100vh;
 }
 
-.chat-room-list h1 {
-  font-size: 28px;
+/* Header */
+h1 {
+  font-size: 24px;
   color: #333;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.chat-room-list h3 {
-  font-size: 20px;
-  color: #555;
-  margin: 20px 0 10px;
+  margin: 0 0 20px 0;
+  font-weight: 600;
 }
 
 .chat-actions {
@@ -28,165 +22,261 @@
 }
 
 .add-chat-button {
-  background-color: #3897f0;
+  background: #007bff;
   color: white;
   border: none;
+  border-radius: 50%;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  font-size: 24px;
-  line-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
+  font-size: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .add-chat-button:hover {
-  background-color: #3178c6;
+  background: #0056b3;
   transform: scale(1.1);
 }
 
-.friends-dropdown {
-  position: absolute;
-  top: 120px;
-  right: 20px;
-  width: 300px;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  padding: 15px;
-  z-index: 10;
+/* Loading state */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
 }
 
-.create-chat-form {
+.spinner {
+  border: 4px solid rgba(0,0,0,0.1);
+  border-left-color: #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
   margin-bottom: 10px;
 }
 
-.friend-selection {
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Friends dropdown */
+.friends-dropdown {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 20px;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s forwards;
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.friends-dropdown h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.create-chat-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 200px;
+  gap: 15px;
+}
+
+.group-name-input {
+  margin-bottom: 15px;
+}
+
+.group-name-input label {
+  display: block;
+  margin-bottom: 5px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.group-name-input input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.group-name-input input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
+}
+
+.friend-selection {
+  max-height: 300px;
   overflow-y: auto;
+  padding-right: 10px;
 }
 
 .friend-selection label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  color: #444;
-  padding: 8px;
-  background-color: #f0f2f5;
-  border-radius: 8px;
-  transition: background-color 0.2s;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  cursor: pointer;
 }
 
 .friend-selection label:hover {
-  background-color: #e4e6eb;
+  background: #f8f9fa;
 }
 
 .friend-selection input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
   cursor: pointer;
+  accent-color: #007bff;
+}
+
+.friend-selection span {
+  flex: 1;
+  color: #333;
+  font-size: 14px;
 }
 
 .direct-chat-button {
-  background-color: #4caf50;
+  background: #28a745;
   color: white;
   border: none;
-  padding: 5px 10px;
-  border-radius: 15px;
-  font-size: 14px;
+  border-radius: 4px;
+  padding: 6px 12px;
   cursor: pointer;
-  margin-left: auto;
-  transition: background-color 0.2s;
+  font-size: 14px;
+  transition: all 0.3s ease;
 }
 
 .direct-chat-button:hover {
-  background-color: #45a049;
+  background: #218838;
+}
+
+.no-friends {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
 }
 
 .create-chat-button {
-  background-color: #3897f0;
+  background: #007bff;
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-size: 16px;
+  border-radius: 6px;
+  padding: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-  margin-top: 5%;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.create-chat-button:hover {
+  background: #0056b3;
 }
 
 .create-chat-button:disabled {
-  background-color: #b0c4de;
+  background: #ccc;
   cursor: not-allowed;
 }
 
-.create-chat-button:hover:not(:disabled) {
-  background-color: #3178c6;
+/* Chat rooms */
+h3 {
+  font-size: 18px;
+  color: #333;
+  margin: 20px 0 15px;
+  font-weight: 500;
 }
 
 .room-list {
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.room-list li {
-  margin: 10px 0;
-}
-
-.room-list button {
-  width: 100%;
-  padding: 12px 15px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-  color: #333;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s, box-shadow 0.2s;
+.chat-room-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  background: white;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.room-list button:hover {
-  background-color: #f9f9f9;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+.chat-room-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-/* Removed .chat-icon since we're using images now */
-/* .chat-icon {
-  font-size: 18px;
-} */
+.chat-room-button {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
 
 .chat-profile-pic {
-  width: 40px; /* Adjust size as needed */
+  width: 40px;
   height: 40px;
-  border-radius: 50%; /* Circular profile picture */
-  object-fit: cover; /* Ensure image fits nicely */
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #eee;
+  margin-right: 12px;
 }
 
-.no-friends {
-  color: #888;
-  font-style: italic;
-  text-align: center;
+.chat-room-button span {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.group-name-input {
-  margin-bottom: 1rem;
-}
-
-.group-name-input label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.group-name-input input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
+.delete-chat-button {
+  background: transparent;
+  color: #ff4444;
+  border: none;
   border-radius: 4px;
-  font-size: 1rem;
+  padding: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.chat-room-item:hover .delete-chat-button {
+  opacity: 1;
+}
+
+.delete-chat-button:hover {
+  background: #ff4444;
+  color: white;
 }
