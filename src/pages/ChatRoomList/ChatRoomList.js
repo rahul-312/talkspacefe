@@ -19,7 +19,7 @@ function ChatRoomList() {
       const response = await getChatRooms();
       console.log('Chat rooms response:', response.data);
       setChatRooms(response.data || []);
-      return response.data || []; // Return data for further processing
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
       setChatRooms([]);
@@ -52,7 +52,6 @@ function ChatRoomList() {
     }
   }, [userProfiles]);
 
-  // Initial data fetch
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -78,9 +77,8 @@ function ChatRoomList() {
     };
 
     fetchInitialData();
-  }, [navigate, fetchChatRooms, fetchFriends]); // Removed chatRooms from dependencies
+  }, [navigate, fetchChatRooms, fetchFriends]);
 
-  // Fetch user profiles after chatRooms is updated
   useEffect(() => {
     if (!loading && chatRooms.length > 0) {
       const uniqueUserIds = new Set();
@@ -91,7 +89,7 @@ function ChatRoomList() {
       });
       Promise.all([...uniqueUserIds].map((id) => fetchUserProfile(id)));
     }
-  }, [chatRooms, loading, fetchUserProfile]); // Depend on chatRooms and loading
+  }, [chatRooms, loading, fetchUserProfile]);
 
   const handleCreateOrJoinChat = async (friendId) => {
     const existingChat = chatRooms.find(
@@ -133,6 +131,25 @@ function ChatRoomList() {
       navigate(`/chatrooms/${response.data.id}`);
     } catch (error) {
       console.error('Error creating group chat:', error);
+    }
+  };
+
+  const getChatProfileImage = (room) => {
+    if (room.is_group_chat) {
+      return room.profile_image 
+        ? `${MEDIA_BASE_URL}${room.profile_image}`
+        : '/default-group.png'; // Updated to use public directory
+    } else {
+      const otherUser = room.other_users?.[0];
+      if (otherUser?.profile_picture) {
+        return `${MEDIA_BASE_URL}${otherUser.profile_picture}`;
+      } else {
+        const userId = otherUser?.id;
+        const profile = userProfiles[userId];
+        return profile?.profile_picture 
+          ? `${MEDIA_BASE_URL}${profile.profile_picture}`
+          : '/default-profile.png'; // Updated to use public directory
+      }
     }
   };
 
@@ -205,10 +222,10 @@ function ChatRoomList() {
           <li key={room.id}>
             <button onClick={() => navigate(`/chatrooms/${room.id}`)}>
               <img
-                // src={getChatProfileImage(room)}
+                src={getChatProfileImage(room)}
                 alt="Profile"
                 className="chat-profile-pic"
-                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/default-profile.png`)}
+                onError={(e) => (e.target.src = '/default-profile.png')} // Updated to use public directory
               />
               {getChatDisplayName(room)}
             </button>
