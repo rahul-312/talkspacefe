@@ -152,20 +152,6 @@ function ChatRoomList() {
     }
   };
 
-  const getChatProfileImage = (room) => {
-    if (room.is_group_chat) {
-      return `${MEDIA_BASE_URL}/media/profile_pictures/default-group.png`;
-    } else {
-      const otherUser = room.other_users?.[0];
-      const userId = otherUser?.id;
-      const profile = userProfiles[userId] || otherUser;
-      if (profile?.profile_picture) {
-        return `${MEDIA_BASE_URL}${profile.profile_picture}`;
-      }
-      return `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`;
-    }
-  };
-
   if (loading || !currentUserId) {
     return <div>Loading chats...</div>;
   }
@@ -219,10 +205,10 @@ function ChatRoomList() {
           <li key={room.id}>
             <button onClick={() => navigate(`/chatrooms/${room.id}`)}>
               <img
-                src={getChatProfileImage(room)}
+                // src={getChatProfileImage(room)}
                 alt="Profile"
                 className="chat-profile-pic"
-                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/profile_pictures/default-profile.png`)}
+                onError={(e) => (e.target.src = `${MEDIA_BASE_URL}/media/default-profile.png`)}
               />
               {getChatDisplayName(room)}
             </button>
