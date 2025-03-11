@@ -1,7 +1,10 @@
 /* Message List Container */
+/* Message List Container */
 .message-list {
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  width: 100%;
   height: 100vh;
   width: 100%;
   max-width: 600px;

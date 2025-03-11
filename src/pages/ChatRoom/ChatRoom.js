@@ -11,7 +11,6 @@ function ChatRoom() {
   const fetchRoomDetails = useCallback(async () => {
     try {
       const response = await getChatRoomDetails(id);
-      console.log('Room details response:', response.data);
       setRoom(response.data.chat_room);
     } catch (error) {
       console.error('Error fetching room details:', error);

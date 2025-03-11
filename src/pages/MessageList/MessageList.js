@@ -186,9 +186,7 @@ function MessageList({ roomId }) {
             )}
             <div className="message-content">
               <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
-              <span className="message-timestamp">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </span>
+              <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
               <div>{msg.message}</div>
             </div>
             {msg.user === currentUserId && (
