@@ -12,6 +12,7 @@ function ChatRoomList() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfiles, setUserProfiles] = useState({});
+  const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
 
   const fetchChatRooms = useCallback(async () => {
@@ -123,10 +124,16 @@ function ChatRoomList() {
   const handleCreateGroupChat = async (e) => {
     e.preventDefault();
     if (selectedFriendIds.length === 0) return;
+    if (!groupName.trim()) {
+      alert("Group name is required for group chats.");
+      return;
+    }
+    
     try {
-      const response = await createChatRoom(selectedFriendIds);
+      const response = await createChatRoom(selectedFriendIds, groupName);
       setChatRooms((prev) => [...prev, response.data]);
       setSelectedFriendIds([]);
+      setGroupName('');
       setShowFriends(false);
       navigate(`/chatrooms/${response.data.id}`);
     } catch (error) {
@@ -138,7 +145,7 @@ function ChatRoomList() {
     if (room.is_group_chat) {
       return room.profile_image 
         ? `${MEDIA_BASE_URL}${room.profile_image}`
-        : '/default-group.png'; // Updated to use public directory
+        : '/default-group.png';
     } else {
       const otherUser = room.other_users?.[0];
       if (otherUser?.profile_picture) {
@@ -148,7 +155,7 @@ function ChatRoomList() {
         const profile = userProfiles[userId];
         return profile?.profile_picture 
           ? `${MEDIA_BASE_URL}${profile.profile_picture}`
-          : '/default-profile.png'; // Updated to use public directory
+          : '/default-profile.png';
       }
     }
   };
@@ -186,6 +193,18 @@ function ChatRoomList() {
         <div className="friends-dropdown">
           <h3>Create Chat</h3>
           <form className="create-chat-form" onSubmit={handleCreateGroupChat}>
+            <div className="group-name-input">
+              <label>
+                Group Name:
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Enter group name"
+                  required
+                />
+              </label>
+            </div>
             <div className="friend-selection">
               {friends.length > 0 ? (
                 friends.map((friend) => (
@@ -225,7 +244,7 @@ function ChatRoomList() {
                 src={getChatProfileImage(room)}
                 alt="Profile"
                 className="chat-profile-pic"
-                onError={(e) => (e.target.src = '/default-profile.png')} // Updated to use public directory
+                onError={(e) => (e.target.src = '/default-profile.png')}
               />
               {getChatDisplayName(room)}
             </button>
