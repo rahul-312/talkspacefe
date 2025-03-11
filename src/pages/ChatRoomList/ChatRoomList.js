@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react'; // Add useRef
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { getChatRooms, createChatRoom, getFriends, getUserProfileById, deleteChatRoom, MEDIA_BASE_URL } from '../../api';
@@ -10,11 +10,31 @@ function ChatRoomList() {
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
   const [showFriends, setShowFriends] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [creatingChat, setCreatingChat] = useState(false); // New state for chat creation
+  const [creatingChat, setCreatingChat] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfiles, setUserProfiles] = useState({});
   const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
+
+  // Add a ref for the friends dropdown
+  const dropdownRef = useRef(null);
+
+  // Function to close the dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowFriends(false);
+      }
+    };
+
+    // Attach the event listener
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup the event listener on unmount
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchChatRooms = useCallback(async () => {
     try {
@@ -96,7 +116,7 @@ function ChatRoomList() {
   const handleCreateOrJoinChat = async (friendId) => {
     if (creatingChat) return;
     console.log('handleCreateOrJoinChat called with friendId:', friendId);
-  
+
     const existingChat = chatRooms.find(
       (room) =>
         !room.is_group_chat &&
@@ -104,7 +124,7 @@ function ChatRoomList() {
         room.users.includes(currentUserId) &&
         room.users.length === 2
     );
-  
+
     if (existingChat) {
       console.log('Navigating to existing chat:', existingChat.id);
       navigate(`/chatrooms/${existingChat.id}`);
@@ -115,17 +135,16 @@ function ChatRoomList() {
         const response = await createChatRoom([friendId]);
         const chatRoom = response.data;
         console.log('Chat room response:', chatRoom);
-  
-        // Update state only if this is a new chat room not already in the list
+
         setChatRooms((prev) => {
           const exists = prev.some((room) => room.id === chatRoom.id);
           if (exists) {
-            return prev; // Chat already exists in state, no update needed
+            return prev;
           }
           return [...prev.filter((room) => room.id !== chatRoom.id), chatRoom];
         });
-  
-        await fetchChatRooms(); // Refresh to ensure consistency
+
+        await fetchChatRooms();
         navigate(`/chatrooms/${chatRoom.id}`);
       } catch (error) {
         console.error('Error creating/joining chat room:', error);
@@ -170,7 +189,7 @@ function ChatRoomList() {
       const response = await createChatRoom(selectedFriendIds, groupName);
       const newChat = response.data;
       setChatRooms((prev) => [...prev, newChat]);
-      await fetchChatRooms(); // Refresh the list
+      await fetchChatRooms();
       setSelectedFriendIds([]);
       setGroupName('');
       setShowFriends(false);
@@ -189,7 +208,7 @@ function ChatRoomList() {
       try {
         await deleteChatRoom(roomId);
         setChatRooms((prev) => prev.filter((room) => room.id !== roomId));
-        await fetchChatRooms(); // Refresh the list after deletion
+        await fetchChatRooms();
       } catch (error) {
         console.error('Error deleting chat room:', error);
         alert('Failed to delete chat room: ' + (error.response?.data?.detail || 'Unknown error'));
@@ -254,7 +273,7 @@ function ChatRoomList() {
       </div>
 
       {showFriends && (
-        <div className="friends-dropdown">
+        <div className="friends-dropdown" ref={dropdownRef}>
           <h3>Create Chat</h3>
           <form className="create-chat-form" onSubmit={handleCreateGroupChat}>
             <div className="group-name-input">
