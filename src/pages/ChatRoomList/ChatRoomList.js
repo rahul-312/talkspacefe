@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { getChatRooms, createChatRoom, getFriends, getUserProfileById, MEDIA_BASE_URL } from '../../api';
+import { getChatRooms, createChatRoom, getFriends, getUserProfileById, deleteChatRoom, MEDIA_BASE_URL } from '../../api';
 import './ChatRoomList.css';
 
 function ChatRoomList() {
@@ -10,6 +10,7 @@ function ChatRoomList() {
   const [selectedFriendIds, setSelectedFriendIds] = useState([]);
   const [showFriends, setShowFriends] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [creatingChat, setCreatingChat] = useState(false); // New state for chat creation
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfiles, setUserProfiles] = useState({});
   const [groupName, setGroupName] = useState('');
@@ -93,6 +94,9 @@ function ChatRoomList() {
   }, [chatRooms, loading, fetchUserProfile]);
 
   const handleCreateOrJoinChat = async (friendId) => {
+    if (creatingChat) return;
+    console.log('handleCreateOrJoinChat called with friendId:', friendId);
+  
     const existingChat = chatRooms.find(
       (room) =>
         !room.is_group_chat &&
@@ -100,16 +104,47 @@ function ChatRoomList() {
         room.users.includes(currentUserId) &&
         room.users.length === 2
     );
-
+  
     if (existingChat) {
+      console.log('Navigating to existing chat:', existingChat.id);
       navigate(`/chatrooms/${existingChat.id}`);
     } else {
       try {
+        setCreatingChat(true);
+        console.log('Attempting to create/join chat with user_ids:', [friendId]);
         const response = await createChatRoom([friendId]);
-        setChatRooms((prev) => [...prev, response.data]);
-        navigate(`/chatrooms/${response.data.id}`);
+        const chatRoom = response.data;
+        console.log('Chat room response:', chatRoom);
+  
+        // Update state only if this is a new chat room not already in the list
+        setChatRooms((prev) => {
+          const exists = prev.some((room) => room.id === chatRoom.id);
+          if (exists) {
+            return prev; // Chat already exists in state, no update needed
+          }
+          return [...prev.filter((room) => room.id !== chatRoom.id), chatRoom];
+        });
+  
+        await fetchChatRooms(); // Refresh to ensure consistency
+        navigate(`/chatrooms/${chatRoom.id}`);
       } catch (error) {
-        console.error('Error creating chat room:', error);
+        console.error('Error creating/joining chat room:', error);
+        console.error('Error details:', error.response?.data);
+        await fetchChatRooms();
+        const refreshedChat = chatRooms.find(
+          (room) =>
+            !room.is_group_chat &&
+            room.users.includes(friendId) &&
+            room.users.includes(currentUserId) &&
+            room.users.length === 2
+        );
+        if (refreshedChat) {
+          navigate(`/chatrooms/${refreshedChat.id}`);
+        } else {
+          alert('Failed to create or join chat room: ' + (error.response?.data?.detail || 'Unknown error'));
+        }
+      } finally {
+        setCreatingChat(false);
       }
     }
     setShowFriends(false);
@@ -128,16 +163,37 @@ function ChatRoomList() {
       alert("Group name is required for group chats.");
       return;
     }
-    
+
     try {
+      setCreatingChat(true);
+      console.log('Creating group chat with user_ids:', selectedFriendIds, 'name:', groupName);
       const response = await createChatRoom(selectedFriendIds, groupName);
-      setChatRooms((prev) => [...prev, response.data]);
+      const newChat = response.data;
+      setChatRooms((prev) => [...prev, newChat]);
+      await fetchChatRooms(); // Refresh the list
       setSelectedFriendIds([]);
       setGroupName('');
       setShowFriends(false);
-      navigate(`/chatrooms/${response.data.id}`);
+      navigate(`/chatrooms/${newChat.id}`);
     } catch (error) {
       console.error('Error creating group chat:', error);
+      console.error('Error details:', error.response?.data);
+      alert('Failed to create group chat: ' + (error.response?.data?.detail || 'Unknown error'));
+    } finally {
+      setCreatingChat(false);
+    }
+  };
+
+  const handleDeleteChatRoom = async (roomId) => {
+    if (window.confirm('Are you sure you want to delete this chat room?')) {
+      try {
+        await deleteChatRoom(roomId);
+        setChatRooms((prev) => prev.filter((room) => room.id !== roomId));
+        await fetchChatRooms(); // Refresh the list after deletion
+      } catch (error) {
+        console.error('Error deleting chat room:', error);
+        alert('Failed to delete chat room: ' + (error.response?.data?.detail || 'Unknown error'));
+      }
     }
   };
 
@@ -161,7 +217,6 @@ function ChatRoomList() {
   };
 
   const getChatDisplayName = (room) => {
-    console.log('getChatDisplayName - room:', room, 'currentUserId:', currentUserId, 'friends:', friends);
     if (room.is_group_chat) {
       return room.name || 'Group Chat';
     } else {
@@ -177,14 +232,23 @@ function ChatRoomList() {
   };
 
   if (loading || !currentUserId) {
-    return <div>Loading chats...</div>;
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading chats...</p>
+      </div>
+    );
   }
 
   return (
     <div className="chat-room-list">
       <h1>Chat Rooms</h1>
       <div className="chat-actions">
-        <button className="add-chat-button" onClick={() => setShowFriends(!showFriends)}>
+        <button 
+          className="add-chat-button" 
+          onClick={() => setShowFriends(!showFriends)}
+          disabled={creatingChat}
+        >
           +
         </button>
       </div>
@@ -202,6 +266,7 @@ function ChatRoomList() {
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder="Enter group name"
                   required
+                  disabled={creatingChat}
                 />
               </label>
             </div>
@@ -213,12 +278,14 @@ function ChatRoomList() {
                       type="checkbox"
                       checked={selectedFriendIds.includes(friend.id)}
                       onChange={() => toggleFriendSelection(friend.id)}
+                      disabled={creatingChat}
                     />
                     {friend.first_name && friend.last_name ? `${friend.first_name} ${friend.last_name}` : friend.username}
                     <button
                       type="button"
                       className="direct-chat-button"
                       onClick={() => handleCreateOrJoinChat(friend.id)}
+                      disabled={creatingChat}
                     >
                       Chat
                     </button>
@@ -228,7 +295,11 @@ function ChatRoomList() {
                 <p className="no-friends">No friends available</p>
               )}
             </div>
-            <button type="submit" className="create-chat-button" disabled={selectedFriendIds.length < 2}>
+            <button 
+              type="submit" 
+              className="create-chat-button" 
+              disabled={selectedFriendIds.length < 2 || creatingChat}
+            >
               Create Group Chat
             </button>
           </form>
@@ -238,8 +309,12 @@ function ChatRoomList() {
       <h3>Your Chats</h3>
       <ul className="room-list">
         {chatRooms.map((room) => (
-          <li key={room.id}>
-            <button onClick={() => navigate(`/chatrooms/${room.id}`)}>
+          <li key={room.id} className="chat-room-item">
+            <button 
+              className="chat-room-button"
+              onClick={() => navigate(`/chatrooms/${room.id}`)}
+              disabled={creatingChat}
+            >
               <img
                 src={getChatProfileImage(room)}
                 alt="Profile"
@@ -247,6 +322,17 @@ function ChatRoomList() {
                 onError={(e) => (e.target.src = '/default-profile.png')}
               />
               {getChatDisplayName(room)}
+            </button>
+            <button
+              className="delete-chat-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteChatRoom(room.id);
+              }}
+              title="Delete chat room"
+              disabled={creatingChat}
+            >
+              ×
             </button>
           </li>
         ))}

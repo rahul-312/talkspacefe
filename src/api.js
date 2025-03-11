@@ -63,7 +63,7 @@ export const getChatRooms = () => api.get(API.CHATROOM_LIST_CREATE);
 
 export const createChatRoom = (userIds, groupName = '') => {
   const payload = {
-    users: userIds,
+    user_ids: userIds,
     is_group_chat: userIds.length > 1
   };
   
@@ -71,6 +71,7 @@ export const createChatRoom = (userIds, groupName = '') => {
     payload.name = groupName;
   }
 
+  console.log('Sending payload to createChatRoom:', payload); // Debug log
   return api.post(API.CHATROOM_LIST_CREATE, payload);
 };
 
@@ -84,3 +85,7 @@ export const getFriends = () => api.get(API.FRIENDLIST);
 
 export const getUserDetails = () => api.get(API.USER_DETAIL);
 export const getUserProfileById = (id) => api.get(`${API.USER_BY_ID}${id}/`);
+
+export const deleteChatRoom = (roomId) => {
+  return api.delete(`${API.CHATROOM_DETAIL}${roomId}/`);
+};
