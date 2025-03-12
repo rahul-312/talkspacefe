@@ -17,17 +17,39 @@ const useChatWebSocket = (roomId, onMessageReceived) => {
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       const messageId = `${data.user_id || data.user}-${data.timestamp}`;
-      if (!processedMessageIds.current.has(messageId)) {
-        processedMessageIds.current.add(messageId);
-        onMessageReceived({
-          id: Date.now(),
-          message: data.message,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          user: data.user_id || data.user,
-          profile_picture: data.profile_picture,
-          timestamp: data.timestamp,
-        });
+      
+      // Get the action type, default to 'create'
+      const action = data.action || 'create';
+      
+      // Prepare the message data
+      const messageData = {
+        id: data.id || Date.now(), // Use server-provided ID if available
+        message: data.message,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        user: data.user_id || data.user,
+        profile_picture: data.profile_picture,
+        timestamp: data.timestamp,
+        action: action // Include action type
+      };
+
+      // Handle different action types
+      if (action === 'create') {
+        // Only process new messages that haven't been processed before
+        if (!processedMessageIds.current.has(messageId)) {
+          processedMessageIds.current.add(messageId);
+          onMessageReceived(messageData);
+        }
+      } else if (action === 'edit') {
+        // For edit actions, always process (don't check processedMessageIds)
+        // This allows updates to existing messages
+        onMessageReceived(messageData);
+      } else if (action === 'delete') {
+        // For delete actions, always process
+        onMessageReceived(messageData);
+      } else if (action === 'error') {
+        console.error('Chat error:', data.message);
+        onMessageReceived(messageData);
       }
     };
 

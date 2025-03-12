@@ -71,7 +71,7 @@ export const createChatRoom = (userIds, groupName = '') => {
     payload.name = groupName;
   }
 
-  console.log('Sending payload to createChatRoom:', payload); // Debug log
+  console.log('Sending payload to createChatRoom:', payload);
   return api.post(API.CHATROOM_LIST_CREATE, payload);
 };
 
@@ -80,6 +80,36 @@ export const getMessages = (roomId) =>
   api.get(`${API.CHATMESSAGE_LIST_CREATE}?room_id=${roomId}`);
 export const sendMessage = (roomId, message) =>
   api.post(API.CHATMESSAGE_LIST_CREATE, { room_id: roomId, message });
+
+// Add edit and delete message functions
+export const editMessage = async (roomId, messageId, message) => {
+  try {
+    const response = await api.put(API.CHATMESSAGE_LIST_CREATE, {
+      message_id: messageId,
+      message: message,
+      room_id: roomId
+    });
+    return response;
+  } catch (error) {
+    console.error('Error editing message:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const deleteMessage = async (roomId, messageId) => {
+  try {
+    const response = await api.delete(API.CHATMESSAGE_LIST_CREATE, {
+      data: {
+        message_id: messageId,
+        room_id: roomId
+      }
+    });
+    return response;
+  } catch (error) {
+    console.error('Error deleting message:', error.response?.data || error.message);
+    throw error;
+  }
+};
 
 export const getFriends = () => api.get(API.FRIENDLIST);
 
