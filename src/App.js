@@ -9,7 +9,11 @@ import FriendList from "./pages/FriendList/FriendList";
 import AddFriend from "./pages/AddFriend/AddFriend";
 import ChatRoomList from "./pages/ChatRoomList/ChatRoomList";
 import ChatRoomDetail from "./pages/ChatRoom/ChatRoom";
-import Profile from "./pages/Profile/Profile"; // Import the Profile component
+import Profile from "./pages/Profile/Profile";
+
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
+
 import "./styles/App.css";
 
 function App() {
@@ -22,6 +26,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/friend-list" element={<FriendList />} />
             <Route path="/add-friend" element={<AddFriend />} />

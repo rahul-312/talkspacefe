@@ -131,13 +131,11 @@ function MessageList({ roomId }) {
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (window.confirm('Are you sure you want to delete this message?')) {
-      try {
-        await deleteMessage(roomId, messageId);
-        setMessages((prev) => prev.filter((msg) => msg.id !== messageId)); // Local state update
-      } catch (error) {
-        console.error('Error deleting message:', error.response?.data || error.message);
-      }
+    try {
+      await deleteMessage(roomId, messageId);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId)); // Local state update
+    } catch (error) {
+      console.error('Error deleting message:', error.response?.data || error.message);
     }
   };
 
@@ -285,7 +283,7 @@ function MessageList({ roomId }) {
                             className="delete-option"
                             onClick={() => handleDeleteMessage(msg.id)}
                           >
-                            <FaTrash /> Delete
+                            <FaTrash /> Unsend
                           </button>
                         </div>
                       )}
