@@ -1,7 +1,7 @@
 import { useState } from "react";
-import axios from "axios"; // Import Axios
-import { API, apiConfig } from "../../api"; // Import API paths and config
-import { Link, useNavigate } from "react-router-dom"; // Import useNavigate for redirection
+import axios from "axios";
+import { API, apiConfig } from "../../api";
+import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
 
 const Login = () => {
@@ -11,50 +11,63 @@ const Login = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // Hook to navigate programmatically
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent page reload on form submission
-    setError(""); // Clear previous errors
-    setLoading(true); // Start loading state
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Prepare data for the API call
     const loginData = {
       email: formData.email,
       password: formData.password,
     };
 
     try {
-      // Make the POST request to the login API using Axios with apiConfig
       const response = await axios.post(API.LOGIN, loginData, {
         timeout: apiConfig.timeout,
         headers: apiConfig.headers,
       });
 
-      // Handle successful response
       if (response.data.tokens) {
         localStorage.setItem("access_token", response.data.tokens.access);
         localStorage.setItem("refresh_token", response.data.tokens.refresh);
-        navigate("/dashboard"); // Redirect to dashboard
+        navigate("/dashboard");
       }
     } catch (err) {
-      // Handle error response
       setError(
         err.response?.data?.message || "Invalid credentials. Please try again."
       );
     } finally {
-      setLoading(false); // Stop loading state
+      setLoading(false);
     }
+  };
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
   };
 
   return (
-    <div className="login-wrapper">
+    <div className="login-page">
+      <div className="login-illustration">
+        <div className="illustration-content">
+          <img
+            src="/images/login-illustration.jpg"
+            alt="Login Illustration"
+            className="login-image"
+          />
+        </div>
+      </div>
+
       <div className="login-container">
-        <h2>Login</h2>
+      <h1>Hello!<br />{getGreeting()}</h1>
+        <h2>Login your account</h2>
         <form onSubmit={handleLogin}>
           <input
             type="email"
@@ -76,13 +89,14 @@ const Login = () => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
         {error && <p className="error-msg">{error}</p>}
-        <p className="signup-link">
-          Don't have an account? <Link to="/register">Sign up</Link>
-        </p>
-        {/* Forgot Password Link */}
+
         <p className="forgot-password-link">
           <Link to="/forgot-password">Forgot Password?</Link>
+        </p>
+        <p className="signup-link">
+          Don't have an account? <Link to="/register">Create Account</Link>
         </p>
       </div>
     </div>
