@@ -1,102 +1,62 @@
-/* AddFriend.css */
-
-.add-friend-container {
-  max-width: 600px;
-  margin: 10% auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.search-form {
+.add-friend-page {
   display: flex;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 640px;
 }
 
-.search-input {
+.add-friend-page h1 {
+  font-size: var(--text-xl);
+}
+
+.add-friend-search {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.add-friend-search input {
   flex: 1;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-right: 10px;
+  min-width: 0;
 }
 
-.search-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.add-friend-section h2 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-3);
 }
 
-.search-button:hover {
-  background-color: #0056b3;
+.card .add-friend-section {
+  margin-top: var(--space-5);
 }
 
-.error-message {
-  color: #dc3545;
-  margin-bottom: 20px;
-}
-
-.success-message {
-  color: #28a745;
-  margin-bottom: 20px;
-}
-
-.search-results, .pending-requests {
-  margin-top: 20px;
-}
-
-.search-results h3, .pending-requests h3 {
-  margin-bottom: 10px;
-  font-size: 20px;
-}
-
-.user-result, .request-item {
+.add-friend-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  background-color: #f9f9f9;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-.add-button, .accept-button, .reject-button {
-  padding: 5px 10px;
-  font-size: 14px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.add-friend-row + .add-friend-row {
+  margin-top: var(--space-2);
 }
 
-.add-button {
-  background-color: #28a745;
-  color: white;
+.add-friend-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.add-button:hover {
-  background-color: #218838;
+.add-friend-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
-.accept-button {
-  background-color: #28a745;
-  color: white;
-  margin-right: 5px;
-}
-
-.accept-button:hover {
-  background-color: #218838;
-}
-
-.reject-button {
-  background-color: #dc3545;
-  color: white;
-}
-
-.reject-button:hover {
-  background-color: #c82333;
+@media (max-width: 480px) {
+  .add-friend-search {
+    flex-direction: column;
+  }
 }

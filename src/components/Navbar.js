@@ -1,33 +1,50 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
-import "../styles/Navbar.css";
-import { API, apiConfig } from "../api";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { FaCog } from "react-icons/fa";
+import "./Navbar.css";
+import { logout, clearAuth, isAuthenticated } from "../api";
+import { ROUTES } from "../routes";
+
+const PRIVATE_LINKS = [
+  { to: ROUTES.DASHBOARD, label: "Dashboard" },
+  { to: ROUTES.FRIEND_LIST, label: "Friends" },
+  { to: ROUTES.ADD_FRIEND, label: "Add Friend" },
+  { to: ROUTES.CHATROOMS, label: "Chat" },
+];
+
+const PUBLIC_LINKS = [
+  { to: ROUTES.LOGIN, label: "Login" },
+  { to: ROUTES.REGISTER, label: "Register" },
+];
+
+const navLinkClass = ({ isActive }) => `nav-link${isActive ? " active" : ""}`;
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const checkAuthStatus = () => {
-    const refreshToken = localStorage.getItem("refresh_token");
-    setIsAuthenticated(!!refreshToken);
-  };
-
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      setIsScrolled(window.scrollY > 8);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
-    checkAuthStatus();
+    if (isAuthenticated()) {
+      setIsLoggedIn(true);
+    } else {
+      // expired or malformed tokens shouldn't linger in storage
+      clearAuth();
+      setIsLoggedIn(false);
+    }
+    setIsDropdownOpen(false);
   }, [location]);
 
   // Close dropdown when clicking outside
@@ -43,90 +60,58 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (!refreshToken) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      setIsAuthenticated(false);
-      navigate("/login");
-      return;
-    }
-
     try {
-      await axios.post(
-        API.LOGOUT,
-        { refresh: refreshToken },
-        {
-          timeout: apiConfig.timeout,
-          headers: apiConfig.headers,
-        }
-      );
+      await logout();
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      setIsAuthenticated(false);
-      navigate("/login");
+      setIsLoggedIn(false);
+      setIsDropdownOpen(false);
+      // replace so Back can't return to an authenticated page
+      navigate(ROUTES.LOGIN, { replace: true });
     }
   };
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
+  const links = isLoggedIn ? PRIVATE_LINKS : PUBLIC_LINKS;
 
   return (
     <nav className={`nav ${isScrolled ? "scrolled" : ""}`}>
-      <div className="nav-left">
-        <ul>
-          <li>
-            <Link to="/">Home</Link>
+      <Link to={ROUTES.HOME} className="nav-brand">
+        TalkSpace
+      </Link>
+      <ul className="nav-links">
+        {links.map(({ to, label }) => (
+          <li key={to}>
+            <NavLink to={to} className={navLinkClass}>
+              {label}
+            </NavLink>
           </li>
-          {isAuthenticated && (
-            <>
-              <li>
-                <Link to="/dashboard">Dashboard</Link>
-              </li>
-              <li>
-                <Link to="/friend-list">Friendlist</Link>
-              </li>
-              <li>
-                <Link to="/add-friend">Add Friend</Link>
-              </li>
-              <li>
-                <Link to="/chatrooms">Chat</Link>
-              </li>
-            </>
-          )}
-          {!isAuthenticated && (
-            <>
-              <li>
-                <Link to="/login">Login</Link>
-              </li>
-              <li>
-                <Link to="/register">Register</Link>
-              </li>
-            </>
-          )}
-        </ul>
-      </div>
-      {isAuthenticated && (
+        ))}
+      </ul>
+      {isLoggedIn && (
         <div className="nav-right" ref={dropdownRef}>
-          <button onClick={toggleDropdown} className="settings-btn">
-            Settings ▼
+          <button
+            type="button"
+            onClick={() => setIsDropdownOpen((open) => !open)}
+            className="settings-btn"
+            aria-haspopup="menu"
+            aria-expanded={isDropdownOpen}
+            aria-label="Settings"
+          >
+            <FaCog aria-hidden="true" />
+            <span className="settings-label">Settings</span>
+            <span aria-hidden="true">▾</span>
           </button>
           {isDropdownOpen && (
-            <div className="dropdown-menu">
-              <Link
-                to="/profile"
-                className="dropdown-item"
-                onClick={() => setIsDropdownOpen(false)}
-              >
+            <div className="dropdown-menu" role="menu">
+              <Link to={ROUTES.PROFILE} className="dropdown-item" role="menuitem">
                 Profile
               </Link>
               <button
+                type="button"
                 onClick={handleLogout}
                 className="dropdown-item logout-btn"
+                role="menuitem"
               >
                 Logout
               </button>

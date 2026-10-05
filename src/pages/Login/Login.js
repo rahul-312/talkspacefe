@@ -1,7 +1,8 @@
 import { useState } from "react";
-import axios from "axios";
-import { API, apiConfig } from "../../api";
+import { login } from "../../api";
 import { Link, useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
+import { LOGIN_ILLUSTRATION } from "../../assets";
 import "./Login.css";
 
 const Login = () => {
@@ -22,30 +23,25 @@ const Login = () => {
     setError("");
     setLoading(true);
 
-    const loginData = {
-      email: formData.email,
-      password: formData.password,
-    };
-
     try {
-      const response = await axios.post(API.LOGIN, loginData, {
-        timeout: apiConfig.timeout,
-        headers: apiConfig.headers,
+      await login({
+        email: formData.email.trim(),
+        password: formData.password,
       });
-
-      if (response.data.tokens) {
-        localStorage.setItem("access_token", response.data.tokens.access);
-        localStorage.setItem("refresh_token", response.data.tokens.refresh);
-        navigate("/dashboard");
-      }
+      navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (err) {
+      // Generic message: don't reveal whether the email has an account.
       setError(
-        err.response?.data?.message || "Invalid credentials. Please try again."
+        err.response
+          ? "Invalid email or password."
+          : "Unable to reach the server. Please try again."
       );
+      setFormData((prev) => ({ ...prev, password: "" }));
     } finally {
       setLoading(false);
     }
   };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good Morning";
@@ -54,50 +50,48 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-illustration">
-        <div className="illustration-content">
-          <img
-            src="/images/login-illustration.jpg"
-            alt="Login Illustration"
-            className="login-image"
-          />
+    <div className="page-center login-page">
+      <div className="login-card">
+        <div className="login-illustration">
+          <img src={LOGIN_ILLUSTRATION} alt="" className="login-image" />
         </div>
-      </div>
 
-      <div className="login-container">
-      <h1>Hello!<br />{getGreeting()}</h1>
-        <h2>Login your account</h2>
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+        <div className="login-container">
+          <h1>Hello!<br />{getGreeting()}</h1>
+          <h2>Log in to your account</h2>
+          <form onSubmit={handleLogin}>
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+              required
+            />
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
 
-        {error && <p className="error-msg">{error}</p>}
+          {error && <p className="alert alert-error" role="alert">{error}</p>}
 
-        <p className="forgot-password-link">
-          <Link to="/forgot-password">Forgot Password?</Link>
-        </p>
-        <p className="signup-link">
-          Don't have an account? <Link to="/register">Create Account</Link>
-        </p>
+          <p className="auth-link">
+            <Link to={ROUTES.FORGOT_PASSWORD}>Forgot Password?</Link>
+          </p>
+          <p className="auth-link">
+            Don't have an account? <Link to={ROUTES.REGISTER}>Create Account</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

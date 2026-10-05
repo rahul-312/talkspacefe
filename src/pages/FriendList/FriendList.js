@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-import { API, apiConfig } from "../../api";
+import { getFriends } from "../../api";
 import "./FriendList.css";
 
 const FriendList = () => {
@@ -9,23 +8,13 @@ const FriendList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState("");
 
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-  });
-
   const fetchFriends = useCallback(
     async (query = "") => {
       try {
-        const url = query.trim()
-          ? `${API.FRIENDLIST}?search=${query}`
-          : API.FRIENDLIST;
-        const response = await axios.get(url, {
-          ...apiConfig,
-          headers: getAuthHeaders(),
-        });
-        setFriends(response.data.friends);
+        const response = await getFriends(query.trim());
+        setFriends(Array.isArray(response.data.friends) ? response.data.friends : []);
         setError("");
-        if (query.trim() && response.data.friends.length === 0) {
+        if (query.trim() && !response.data.friends?.length) {
           setSearchError(`No friends found matching "${query}".`);
         } else {
           setSearchError("");
@@ -34,7 +23,7 @@ const FriendList = () => {
         setError("Failed to load friends list.");
       }
     },
-    [] // dependencies for getAuthHeaders and API values are stable
+    []
   );
 
   // Fetch full friend list on mount
@@ -55,41 +44,47 @@ const FriendList = () => {
     return () => clearTimeout(timer);
   }, [searchQuery, fetchFriends]);
 
-  return (
-    <div className="friendlist-container">
-      <h2>My Friends</h2>
-      {error && <p className="error">{error}</p>}
+  const initials = (friend) =>
+    `${friend.first_name?.[0] || ""}${friend.last_name?.[0] || ""}`.toUpperCase() ||
+    friend.username?.[0]?.toUpperCase() ||
+    "?";
 
-      {/* Search Section */}
-      <div className="search-container">
+  return (
+    <div className="page friendlist-page">
+      <div className="card friendlist-card">
+        <h1>My Friends</h1>
+        {error && <p className="alert alert-error" role="alert">{error}</p>}
+
         <input
-          type="text"
+          type="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by username or name"
-          className="search-input"
+          aria-label="Search friends"
+          maxLength={100}
+          className="friend-search"
         />
+
+        {searchError && searchQuery.trim().length >= 3 && (
+          <p className="alert alert-error">{searchError}</p>
+        )}
+
+        {friends.length === 0 && searchQuery.trim().length < 3 && !error ? (
+          <p className="friend-empty">No friends to display.</p>
+        ) : (
+          <ul className="friend-list">
+            {friends.map((friend) => (
+              <li key={friend.id} className="friend-item">
+                <span className="friend-avatar" aria-hidden="true">{initials(friend)}</span>
+                <span className="friend-name">
+                  {friend.first_name} {friend.last_name}
+                  {friend.username && <span className="friend-username">@{friend.username}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-
-      {/* Display search error or no results message */}
-      {searchError && searchQuery.trim().length >= 3 && (
-        <p className="error">{searchError}</p>
-      )}
-
-      {/* Friend list */}
-      {friends.length === 0 && searchQuery.trim().length < 3 && !error ? (
-        <p>No friends to display.</p>
-      ) : (
-        <ul>
-          {friends.map((friend) => (
-            <li key={friend.id} className="friend-item">
-              <span className="friend-name">
-                {friend.first_name} {friend.last_name}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 };

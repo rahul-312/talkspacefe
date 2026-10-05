@@ -21,7 +21,14 @@ function ChatRoom() {
     fetchRoomDetails();
   }, [fetchRoomDetails]);
 
-  if (!room) return <div className="loading">Loading...</div>;
+  if (!room) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading chat...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="chat-room">

@@ -1,8 +1,16 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { getMessages, sendMessage, getChatRoomDetails, editMessage, deleteMessage, MEDIA_BASE_URL } from '../../api';
+import {
+  getMessages,
+  sendMessage,
+  getChatRoomDetails,
+  editMessage,
+  deleteMessage,
+  getCurrentUserId,
+  mediaUrl,
+} from '../../api';
 import useChatWebSocket from '../../hooks/useChatWebSocket';
-import { jwtDecode } from 'jwt-decode';
 import { FaPhone, FaVideo, FaEdit, FaTrash } from 'react-icons/fa';
+import { DEFAULT_AVATAR, fallbackToDefaultAvatar } from '../../assets';
 import './MessageList.css';
 
 function MessageList({ roomId }) {
@@ -14,22 +22,15 @@ function MessageList({ roomId }) {
   const [showOptions, setShowOptions] = useState(null); // For three-dots menu
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const optionsMenuRef = useRef(null); // Ref for click outside detection
 
-  const token = localStorage.getItem('access_token');
-  let currentUserId;
-  try {
-    const decoded = jwtDecode(token);
-    currentUserId = decoded.user_id || decoded.sub;
-  } catch (error) {
-    currentUserId = null;
-    console.error('Error decoding JWT:', error);
-  }
+  const currentUserId = getCurrentUserId();
 
-  // Handle click outside to close options menu
+  // Close the options menu on clicks outside any message's actions. (A single
+  // shared ref only ever pointed at the last message, which swallowed clicks
+  // on every other menu.)
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target)) {
+      if (!event.target.closest('.message-actions')) {
         setShowOptions(null);
       }
     };
@@ -41,13 +42,9 @@ function MessageList({ roomId }) {
   }, []);
 
   const handleMessageReceived = useCallback((newMsg) => {
-    const profilePictureUrl = newMsg.profile_picture
-      ? `${MEDIA_BASE_URL}${newMsg.profile_picture.startsWith('/') ? '' : '/'}${newMsg.profile_picture}`
-      : '/default-profile.png';
-
     const updatedMsg = {
       ...newMsg,
-      profile_picture: profilePictureUrl
+      profile_picture: mediaUrl(newMsg.profile_picture)
     };
 
     if (newMsg.action === 'create') {
@@ -71,15 +68,11 @@ function MessageList({ roomId }) {
   const fetchMessages = useCallback(async () => {
     try {
       const response = await getMessages(roomId);
-      const updatedMessages = response.data.map(msg => {
-        const profilePictureUrl = msg.profile_picture
-          ? `${MEDIA_BASE_URL}${msg.profile_picture.startsWith('/') ? '' : '/'}${msg.profile_picture}`
-          : '/default-profile.png';
-        return {
-          ...msg,
-          profile_picture: profilePictureUrl
-        };
-      });
+      const data = Array.isArray(response.data) ? response.data : [];
+      const updatedMessages = data.map((msg) => ({
+        ...msg,
+        profile_picture: mediaUrl(msg.profile_picture)
+      }));
       setMessages(updatedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error.response?.data || error.message);
@@ -90,15 +83,10 @@ function MessageList({ roomId }) {
     try {
       const response = await getChatRoomDetails(roomId);
       if (response.data.other_users && response.data.other_users.length > 0) {
-        response.data.other_users = response.data.other_users.map(user => {
-          const profilePictureUrl = user.profile_picture
-            ? `${MEDIA_BASE_URL}${user.profile_picture.startsWith('/') ? '' : '/'}${user.profile_picture}`
-            : '/default-profile.png';
-          return {
-            ...user,
-            profile_picture: profilePictureUrl
-          };
-        });
+        response.data.other_users = response.data.other_users.map((user) => ({
+          ...user,
+          profile_picture: mediaUrl(user.profile_picture)
+        }));
       }
       setRoomDetails(response.data);
     } catch (error) {
@@ -150,34 +138,6 @@ function MessageList({ roomId }) {
     setEditMessageContent('');
   };
 
-  const handleImageError = (e, retries = 2, delay = 1000) => {
-    console.error(`Failed to load image: ${e.target.src}`);
-    fetch(e.target.src, { method: 'HEAD' })
-      .then(response => {
-        if (response.status === 404 || response.status === 403) {
-          e.target.src = '/default-profile.png';
-        } else if (retries > 0) {
-          console.log(`Retrying image load (${retries} attempts left)...`);
-          setTimeout(() => {
-            e.target.src = `${e.target.src}&retry=${retries}`;
-          }, delay);
-        } else {
-          e.target.src = '/default-profile.png';
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch image headers:', err);
-        if (retries > 0) {
-          console.log(`Retrying image load (${retries} attempts left)...`);
-          setTimeout(() => {
-            e.target.src = `${e.target.src}&retry=${retries}`;
-          }, delay);
-        } else {
-          e.target.src = '/default-profile.png';
-        }
-      });
-  };
-
   useEffect(() => {
     fetchMessages();
     fetchRoomDetails();
@@ -187,132 +147,141 @@ function MessageList({ roomId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (!currentUserId) return <div>Please log in to view messages</div>;
+  if (!currentUserId) return <div className="loading-container">Please log in to view messages</div>;
 
   const isGroupChat = roomDetails?.chat_room?.is_group_chat;
   const groupName = roomDetails?.chat_room?.name;
   const otherUser = roomDetails?.other_users?.[0];
-
-  const profilePictureUrl = otherUser?.profile_picture || '/default-profile.png';
+  const otherUserName = otherUser ? `${otherUser.first_name} ${otherUser.last_name}` : '';
 
   return (
     <div className="message-list">
       <div className="chat-header">
         {isGroupChat ? (
-          <h3>{groupName || ''}</h3>
+          <h2 className="chat-title">{groupName || ''}</h2>
         ) : (
           otherUser && (
             <div className="user-header">
               <img
-                src={profilePictureUrl}
-                alt={`${otherUser.first_name} ${otherUser.last_name}`}
-                className="chat-profile-pic"
-                onError={(e) => handleImageError(e)}
+                src={otherUser.profile_picture || DEFAULT_AVATAR}
+                alt=""
+                className="chat-header-avatar"
+                onError={fallbackToDefaultAvatar}
               />
-              <h3>{`${otherUser.first_name} ${otherUser.last_name}`}</h3>
+              <h2 className="chat-title">{otherUserName}</h2>
             </div>
           )
         )}
-        <div className="button-group">
-          <button className="call-button" title="Call">
+        <div className="chat-header-actions">
+          <button type="button" className="icon-button" title="Call" aria-label="Call">
             <FaPhone />
           </button>
-          <button className="video-call-button" title="Video Call">
+          <button type="button" className="icon-button" title="Video Call" aria-label="Video call">
             <FaVideo />
           </button>
         </div>
       </div>
       <div className="messages-container" ref={messagesContainerRef}>
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`message ${msg.user === currentUserId ? 'sent' : 'received'}`}
-          >
-            {msg.user !== currentUserId && (
+        {messages.length === 0 && (
+          <p className="messages-empty">No messages yet. Say hello!</p>
+        )}
+        {messages.map((msg) => {
+          const isMine = msg.user === currentUserId;
+          return (
+            <div key={msg.id} className={`message ${isMine ? 'sent' : 'received'}`}>
               <img
                 src={msg.profile_picture}
-                alt={`${msg.first_name} ${msg.last_name}`}
-                className="message-profile-pic"
-                onError={(e) => handleImageError(e)}
+                alt=""
+                className="message-avatar"
+                onError={fallbackToDefaultAvatar}
               />
-            )}
-            <div className="message-content">
-              <div className="message-header">
-                <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
-                <span className="message-timestamp">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </span>
+              <div className="message-bubble">
+                <div className="message-header">
+                  <strong>{msg.first_name || 'Unknown'} {msg.last_name || ''}</strong>
+                  <span className="message-timestamp">
+                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {editingMessageId === msg.id ? (
+                  <div className="edit-message-form">
+                    <input
+                      type="text"
+                      value={editMessageContent}
+                      onChange={(e) => setEditMessageContent(e.target.value)}
+                      placeholder="Edit message..."
+                      aria-label="Edit message"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleEditMessage(msg.id)}
+                      disabled={!editMessageContent.trim()}
+                    >
+                      Save
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={cancelEditing}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="message-body">
+                    <p className="message-text">{msg.message}</p>
+                    {isMine && (
+                      <div className="message-actions">
+                        <button
+                          type="button"
+                          className="more-options-button"
+                          onClick={() => setShowOptions(msg.id === showOptions ? null : msg.id)}
+                          title="More options"
+                          aria-label="More options"
+                          aria-expanded={showOptions === msg.id}
+                        >
+                          ⋮
+                        </button>
+                        {showOptions === msg.id && (
+                          <div className="more-options-menu" role="menu">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="edit-option"
+                              onClick={() => startEditing(msg)}
+                            >
+                              <FaEdit /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="delete-option"
+                              onClick={() => handleDeleteMessage(msg.id)}
+                            >
+                              <FaTrash /> Unsend
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              {editingMessageId === msg.id ? (
-                <div className="edit-message-form">
-                  <input
-                    type="text"
-                    value={editMessageContent}
-                    onChange={(e) => setEditMessageContent(e.target.value)}
-                    placeholder="Edit message..."
-                  />
-                  <button
-                    onClick={() => handleEditMessage(msg.id)}
-                    disabled={!editMessageContent.trim()}
-                  >
-                    Save
-                  </button>
-                  <button onClick={cancelEditing}>Cancel</button>
-                </div>
-              ) : (
-                <div className="message-body">
-                  <div>{msg.message}</div>
-                  {msg.user === currentUserId && (
-                    <div className="message-actions" ref={optionsMenuRef}>
-                      <button
-                        className="more-options-button"
-                        onClick={() => setShowOptions(msg.id === showOptions ? null : msg.id)}
-                        title="More options"
-                      >
-                        ⋮
-                      </button>
-                      {showOptions === msg.id && (
-                        <div className="more-options-menu">
-                          <button
-                            className="edit-option"
-                            onClick={() => startEditing(msg)}
-                          >
-                            <FaEdit /> Edit
-                          </button>
-                          <button
-                            className="delete-option"
-                            onClick={() => handleDeleteMessage(msg.id)}
-                          >
-                            <FaTrash /> Unsend
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
-            {msg.user === currentUserId && (
-              <img
-                src={msg.profile_picture}
-                alt={`${msg.first_name} ${msg.last_name}`}
-                className="message-profile-pic"
-                onError={(e) => handleImageError(e)}
-              />
-            )}
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
       <form className="message-form" onSubmit={handleSendMessage}>
-        <button type="button" className="plus-button" title="Add media">+</button>
+        <button type="button" className="icon-button attach-button" title="Add media" aria-label="Add media">
+          +
+        </button>
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type a message..."
+          aria-label="Message"
         />
-        <button type="submit" className="send-button">Send</button>
+        <button type="submit" className="btn btn-primary send-button" disabled={!newMessage.trim()}>
+          Send
+        </button>
       </form>
     </div>
   );
