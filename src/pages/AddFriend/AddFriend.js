@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { API, apiConfig } from '../../api'; // Adjust path based on your structure
+import {
+  searchUsers,
+  sendFriendRequest as sendFriendRequestApi,
+  getPendingRequests,
+  respondToFriendRequest,
+  errorMessage,
+} from '../../api';
 import './AddFriend.css'; // Optional styling
 
-// Helper function to get auth headers
-const getAuthHeaders = () => ({
-  'Authorization': `Bearer ${localStorage.getItem("access_token")}`,
-  'Content-Type': 'application/json',
-});
+const RESPONSE_ACTIONS = ['accept', 'reject'];
 
 const AddFriend = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,163 +16,143 @@ const AddFriend = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const showError = (msg) => {
+    setSuccessMessage('');
+    setError(msg);
+  };
+
+  const showSuccess = (msg) => {
+    setError('');
+    setSuccessMessage(msg);
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    console.log("Searching for:", searchQuery);
+    const query = searchQuery.trim();
+    if (!query) {
+      showError('Enter a username to search for.');
+      setSearchResults([]);
+      return;
+    }
     try {
-      const url = `${API.SEARCH_USER}${searchQuery}/`; // Ensure your backend expects a trailing slash
-      const response = await axios.get(url, {
-        headers: getAuthHeaders(),
-        timeout: apiConfig.timeout,
-      });
-      console.log("Search Response:", response.data);
-      setSearchResults(response.data.users || []);
+      const response = await searchUsers(query);
+      setSearchResults(Array.isArray(response.data.users) ? response.data.users : []);
       setError('');
     } catch (err) {
-      console.error("Search error:", err);
-      setError(err.response?.data?.error || 'An error occurred while searching');
+      showError(errorMessage(err, 'An error occurred while searching'));
       setSearchResults([]);
     }
   };
 
-  const sendFriendRequest = async (receiverUsername) => {
-    if (!receiverUsername) {
-      setError("Cannot send request: No username provided.");
-      return;
-    }
-    console.log("Sending friend request to:", receiverUsername);
-    const payload = { receiver: receiverUsername };
-    console.log("Request payload:", payload);
-    try {
-      const response = await axios.post(
-        API.SEND_FRIEND_REQUEST,
-        payload,
-        {
-          headers: getAuthHeaders(),
-          timeout: apiConfig.timeout,
-        }
-      );
-      console.log("Send Request Response:", response.data);
-      setSuccessMessage(response.data.message);
-      fetchPendingRequests();
-    } catch (err) {
-      console.error("Send request error:", err);
-      const backendError = err.response?.data;
-
-      if (backendError && backendError.receiver) {
-        setError(backendError.receiver.join(" "));
-      } else if (
-        backendError &&
-        backendError.non_field_errors
-      ) {
-        setError(backendError.non_field_errors.join(" "));
-      } else {
-        setError(err.response?.data?.error || 'Failed to send friend request');
-      }
-    }
-  };
-  // Wrap fetchPendingRequests in useCallback
   const fetchPendingRequests = useCallback(async () => {
-    console.log("Fetching pending requests...");
     try {
-      const response = await axios.get(API.PENDING_REQUESTS, {
-        headers: getAuthHeaders(),
-        timeout: apiConfig.timeout,
-      });
-      console.log("Pending Requests Response:", response.data);
-      setPendingRequests(response.data.requests || []);
+      const response = await getPendingRequests();
+      setPendingRequests(Array.isArray(response.data.requests) ? response.data.requests : []);
     } catch (err) {
-      console.error("Pending requests error:", err);
-      setError(err.response?.data?.error || 'Failed to fetch pending requests');
+      showError(errorMessage(err, 'Failed to fetch pending requests'));
     }
   }, []);
 
-  const respondToRequest = async (requestId, action) => {
-    console.log(`Responding to request ${requestId} with action: ${action}`);
+  const sendFriendRequest = async (receiverUsername) => {
+    if (!receiverUsername) {
+      showError('Cannot send request: No username provided.');
+      return;
+    }
+    setBusy(true);
     try {
-      const url = `${API.RESPOND_REQUEST}${requestId}/`; // Ensure backend expects this URL pattern
-      const response = await axios.post(
-        url,
-        { action },
-        {
-          headers: getAuthHeaders(),
-          timeout: apiConfig.timeout,
-        }
-      );
-      console.log("Respond Request Response:", response.data);
-      setSuccessMessage(response.data.message);
+      const response = await sendFriendRequestApi(receiverUsername);
+      showSuccess(response.data?.message || 'Friend request sent.');
       fetchPendingRequests();
     } catch (err) {
-      console.error("Respond request error:", err);
-      setError(err.response?.data?.error || 'Failed to respond to request');
+      showError(errorMessage(err, 'Failed to send friend request'));
+    } finally {
+      setBusy(false);
     }
   };
 
-  // Run fetchPendingRequests on component mount
-  useEffect(() => {
-    // Only fetch if a token is available
-    if (localStorage.getItem("access_token")) {
+  const respondToRequest = async (requestId, action) => {
+    if (!RESPONSE_ACTIONS.includes(action)) return;
+    setBusy(true);
+    try {
+      const response = await respondToFriendRequest(requestId, action);
+      showSuccess(response.data?.message || `Request ${action}ed.`);
       fetchPendingRequests();
-    } else {
-      setError('No valid token found. Please log in again.');
+    } catch (err) {
+      showError(errorMessage(err, 'Failed to respond to request'));
+    } finally {
+      setBusy(false);
     }
+  };
+
+  useEffect(() => {
+    fetchPendingRequests();
   }, [fetchPendingRequests]);
 
   return (
-    <div className="add-friend-container">
-      <form onSubmit={handleSearch} className="search-form">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search for friends..."
-          className="search-input"
-        />
-        <button type="submit" className="search-button">Search</button>
-      </form>
+    <div className="page add-friend-page">
+      <div className="card">
+        <h1>Find Friends</h1>
+        <form onSubmit={handleSearch} className="add-friend-search">
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by username..."
+            aria-label="Search users"
+            maxLength={150}
+          />
+          <button type="submit" className="btn btn-primary">Search</button>
+        </form>
 
-      {error && <p className="error-message">{error}</p>}
-      {successMessage && <p className="success-message">{successMessage}</p>}
+        {error && <p className="alert alert-error" role="alert">{error}</p>}
+        {successMessage && <p className="alert alert-success" role="status">{successMessage}</p>}
 
-      {searchResults.length > 0 && (
-        <div className="search-results">
-          <h3>Search Results</h3>
-          {searchResults.map((user) => (
-            <div key={user.id} className="user-result">
-              <span>{user.username}</span>
-              <button
-                onClick={() => sendFriendRequest(user.username)}
-                className="add-button"
-              >
-                Add Friend
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+        {searchResults.length > 0 && (
+          <section className="add-friend-section">
+            <h2>Search Results</h2>
+            {searchResults.map((user) => (
+              <div key={user.id} className="add-friend-row">
+                <span className="add-friend-name">{user.username}</span>
+                <button
+                  onClick={() => sendFriendRequest(user.username)}
+                  className="btn btn-success btn-sm"
+                  disabled={busy}
+                >
+                  Add Friend
+                </button>
+              </div>
+            ))}
+          </section>
+        )}
+      </div>
 
       {pendingRequests.length > 0 && (
-        <div className="pending-requests">
-          <h3>Pending Friend Requests</h3>
+        <section className="card add-friend-section">
+          <h2>Pending Friend Requests</h2>
           {pendingRequests.map((request) => (
-            <div key={request.id} className="request-item">
-              <span>{request.sender.username}</span>
-              <button
-                onClick={() => respondToRequest(request.id, 'accept')}
-                className="accept-button"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => respondToRequest(request.id, 'reject')}
-                className="reject-button"
-              >
-                Reject
-              </button>
+            <div key={request.id} className="add-friend-row">
+              <span className="add-friend-name">{request.sender?.username}</span>
+              <div className="add-friend-actions">
+                <button
+                  onClick={() => respondToRequest(request.id, 'accept')}
+                  className="btn btn-success btn-sm"
+                  disabled={busy}
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => respondToRequest(request.id, 'reject')}
+                  className="btn btn-secondary btn-sm"
+                  disabled={busy}
+                >
+                  Reject
+                </button>
+              </div>
             </div>
           ))}
-        </div>
+        </section>
       )}
     </div>
   );

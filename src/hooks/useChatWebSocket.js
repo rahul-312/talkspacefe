@@ -1,87 +1,106 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
+import { WS_BASE_URL, isAuthenticated } from '../api';
+
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_INTERVAL = 3000; // Retry every 3 seconds
+const KNOWN_ACTIONS = ['create', 'edit', 'delete', 'error'];
 
 const useChatWebSocket = (roomId, onMessageReceived) => {
   const processedMessageIds = useRef(new Set());
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
-  const reconnectInterval = 3000; // Retry every 3 seconds
-
-  const connectWebSocket = useCallback(() => {
-    const websocket = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${roomId}/`);
-
-    websocket.onopen = () => {
-      console.log('WebSocket connected for room:', roomId);
-      reconnectAttempts.current = 0; // Reset attempts on successful connection
-    };
-
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const messageId = `${data.user_id || data.user}-${data.timestamp}`;
-      
-      // Get the action type, default to 'create'
-      const action = data.action || 'create';
-      
-      // Prepare the message data
-      const messageData = {
-        id: data.id || Date.now(), // Use server-provided ID if available
-        message: data.message,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        user: data.user_id || data.user,
-        profile_picture: data.profile_picture,
-        timestamp: data.timestamp,
-        action: action // Include action type
-      };
-
-      // Handle different action types
-      if (action === 'create') {
-        // Only process new messages that haven't been processed before
-        if (!processedMessageIds.current.has(messageId)) {
-          processedMessageIds.current.add(messageId);
-          onMessageReceived(messageData);
-        }
-      } else if (action === 'edit') {
-        // For edit actions, always process (don't check processedMessageIds)
-        // This allows updates to existing messages
-        onMessageReceived(messageData);
-      } else if (action === 'delete') {
-        // For delete actions, always process
-        onMessageReceived(messageData);
-      } else if (action === 'error') {
-        console.error('Chat error:', data.message);
-        onMessageReceived(messageData);
-      }
-    };
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    websocket.onclose = (e) => {
-      console.log('WebSocket disconnected, code:', e.code, 'reason:', e.reason);
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current += 1;
-        console.log(`Reconnecting attempt ${reconnectAttempts.current}/${maxReconnectAttempts}...`);
-        setTimeout(connectWebSocket, reconnectInterval);
-      } else {
-        console.error('Max reconnect attempts reached. Giving up.');
-      }
-    };
-
-    return websocket;
-  }, [roomId, onMessageReceived]);
+  // Keep the latest callback without tearing down the socket when it changes.
+  const onMessageRef = useRef(onMessageReceived);
 
   useEffect(() => {
-    const websocket = connectWebSocket();
-    const currentProcessedIds = processedMessageIds.current;
+    onMessageRef.current = onMessageReceived;
+  }, [onMessageReceived]);
+
+  useEffect(() => {
+    if (!roomId) return undefined;
+
+    let websocket = null;
+    let reconnectTimer = null;
+    let reconnectAttempts = 0;
+    // Set on unmount/room change so onclose doesn't schedule a reconnect.
+    let closedByClient = false;
+    const processedIds = processedMessageIds.current;
+
+    const handleMessage = (event) => {
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        console.error('Ignoring malformed WebSocket frame');
+        return;
+      }
+      if (!data || typeof data !== 'object') return;
+
+      const action = data.action || 'create';
+      if (!KNOWN_ACTIONS.includes(action)) return;
+
+      const messageData = {
+        id: data.id ?? Date.now(), // Use server-provided ID if available
+        message: typeof data.message === 'string' ? data.message : '',
+        first_name: data.first_name,
+        last_name: data.last_name,
+        user: data.user_id ?? data.user,
+        profile_picture: data.profile_picture,
+        timestamp: data.timestamp,
+        action,
+      };
+
+      if (action === 'create') {
+        // Only process new messages that haven't been processed before
+        const messageId = data.id ?? `${messageData.user}-${data.timestamp}`;
+        if (processedIds.has(messageId)) return;
+        processedIds.add(messageId);
+      } else if (action === 'error') {
+        console.error('Chat error:', messageData.message);
+      }
+      onMessageRef.current(messageData);
+    };
+
+    const connect = () => {
+      // Never (re)open a socket for a signed-out session.
+      if (closedByClient || !isAuthenticated()) return;
+
+      websocket = new WebSocket(`${WS_BASE_URL}/ws/chat/${encodeURIComponent(roomId)}/`);
+
+      websocket.onopen = () => {
+        reconnectAttempts = 0; // Reset attempts on successful connection
+      };
+
+      websocket.onmessage = handleMessage;
+
+      websocket.onerror = () => {
+        console.error('WebSocket error for room', roomId);
+      };
+
+      websocket.onclose = (e) => {
+        if (closedByClient) return;
+        // 4xxx codes are application-level rejections (e.g. unauthorized);
+        // retrying won't help.
+        if (e.code >= 4000 && e.code < 5000) return;
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts += 1;
+          reconnectTimer = setTimeout(connect, RECONNECT_INTERVAL);
+        } else {
+          console.error('Max reconnect attempts reached. Giving up.');
+        }
+      };
+    };
+
+    connect();
 
     return () => {
-      if (websocket.readyState === WebSocket.OPEN) {
+      closedByClient = true;
+      clearTimeout(reconnectTimer);
+      // Close sockets that are still connecting too, not just open ones.
+      if (websocket && websocket.readyState !== WebSocket.CLOSED) {
         websocket.close();
       }
-      currentProcessedIds.clear();
+      processedIds.clear();
     };
-  }, [connectWebSocket]);
+  }, [roomId]);
 };
 
 export default useChatWebSocket;

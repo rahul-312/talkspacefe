@@ -1,87 +1,67 @@
-/* FriendList.css */
-.friendlist-container {
-  max-width: 600px;
-  margin: 0; /* Remove the old margin since we’re centering with position */
-  padding: 20px;
-  background: #fff;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  text-align: center;
-  position: fixed;
-  width: 100%;
-  top: 50%; /* Move it halfway down the viewport */
-  left: 50%; /* Move it halfway across the viewport */
-  transform: translate(-50%, -50%); /* Shift it back by half its size */
+.friendlist-page {
+  max-width: 640px;
 }
 
-
-.friendlist-container h2 {
-  text-align: center;
-  color: #333;
-  font-size: 24px;
-  margin-bottom: 20px;
+.friendlist-card h1 {
+  font-size: var(--text-xl);
 }
 
-.error {
-  color: #ff4d4d;
-  text-align: center;
-  margin-bottom: 15px;
-  font-size: 14px;
+.friend-search {
+  margin-bottom: var(--space-4);
 }
 
-.search-container {
+.friend-empty {
+  margin: var(--space-5) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.friend-list {
   display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.search-input {
-  width: 100%;
-  max-width: 400px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s ease;
-}
-
-.search-input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-}
-
-ul {
-  list-style-type: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
   padding: 0;
-  margin: 0;
+  list-style: none;
 }
 
 .friend-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px;
-  margin-bottom: 10px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .friend-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-strong);
+}
+
+.friend-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: var(--text-sm);
 }
 
 .friend-name {
-  font-size: 16px;
-  color: #333;
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
 }
 
-/* No friends message */
-.friendlist-container > p {
-  text-align: center;
-  color: #666;
-  font-size: 16px;
+.friend-username {
+  font-weight: 400;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }

@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { ProtectedRoute, PublicOnlyRoute } from "./components/ProtectedRoute";
 import Home from "./pages/Home/Home";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
@@ -10,32 +11,38 @@ import AddFriend from "./pages/AddFriend/AddFriend";
 import ChatRoomList from "./pages/ChatRoomList/ChatRoomList";
 import ChatRoomDetail from "./pages/ChatRoom/ChatRoom";
 import Profile from "./pages/Profile/Profile";
-
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
+import { ROUTES } from "./routes";
 
-import "./styles/App.css";
+import "./App.css";
 
 function App() {
   return (
-    <Router>
+    // basename lets the app live under a sub-path (PUBLIC_URL from "homepage")
+    <Router basename={process.env.PUBLIC_URL || "/"}>
       <div className="app-container">
         <Navbar />
-        <div className="content">
+        <main className="content">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/friend-list" element={<FriendList />} />
-            <Route path="/add-friend" element={<AddFriend />} />
-            <Route path="/chatrooms" element={<ChatRoomList />} />
-            <Route path="/chatrooms/:id" element={<ChatRoomDetail />} />
-            <Route path="/profile" element={<Profile />} /> {/* Added Profile route */}
+            <Route path={ROUTES.HOME} element={<Home />} />
+            <Route element={<PublicOnlyRoute />}>
+              <Route path={ROUTES.LOGIN} element={<Login />} />
+              <Route path={ROUTES.REGISTER} element={<Register />} />
+              <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+              <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
+            </Route>
+            <Route element={<ProtectedRoute />}>
+              <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
+              <Route path={ROUTES.FRIEND_LIST} element={<FriendList />} />
+              <Route path={ROUTES.ADD_FRIEND} element={<AddFriend />} />
+              <Route path={ROUTES.CHATROOMS} element={<ChatRoomList />} />
+              <Route path={ROUTES.CHATROOM} element={<ChatRoomDetail />} />
+              <Route path={ROUTES.PROFILE} element={<Profile />} />
+            </Route>
+            <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
-        </div>
+        </main>
         <Footer />
       </div>
     </Router>
